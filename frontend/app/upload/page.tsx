@@ -17,9 +17,12 @@ export default function UploadPage() {
   const [columns, setColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [previewUrl, setPreviewUrl] = useState("");
+  const [previewMime, setPreviewMime] = useState("");
+  const [previewZoom, setPreviewZoom] = useState(1);
   const [recent, setRecent] = useState<string[]>([]);
 
   const confidence = useMemo(() => Math.round((result?.confidence || 0) * 100), [result]);
+  const previewIsImage = previewMime.startsWith("image/");
 
   function logExtractionDebug(file: File, data: UploadResult) {
     const tableRows = data.extracted_fields.rows.length ? data.extracted_fields.rows : [data.extracted_fields.fields];
@@ -50,6 +53,8 @@ export default function UploadPage() {
   async function handleFile(file?: File) {
     if (!file) return;
     setPreviewUrl(URL.createObjectURL(file));
+    setPreviewMime(file.type);
+    setPreviewZoom(1);
     setLoading(true);
     setProgress(8);
     const progressTimer = window.setInterval(() => {
@@ -83,6 +88,10 @@ export default function UploadPage() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+  }
+
+  function updatePreviewZoom(nextZoom: number) {
+    setPreviewZoom(Math.min(2.5, Math.max(0.5, Number(nextZoom.toFixed(2)))));
   }
 
   return (
@@ -179,9 +188,51 @@ export default function UploadPage() {
         {(previewUrl || result) && (
           <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
             <GlassPanel className="min-w-0 overflow-hidden">
-              <h3 className="mb-4 text-xl font-bold">Original Preview</h3>
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-xl font-bold">Original Preview</h3>
+                {previewUrl ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => updatePreviewZoom(previewZoom - 0.1)}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      -
+                    </button>
+                    <span className="min-w-[64px] rounded-lg bg-slate-50 px-3 py-2 text-center text-sm font-semibold text-slate-700">
+                      {Math.round(previewZoom * 100)}%
+                    </span>
+                    <button
+                      onClick={() => updatePreviewZoom(previewZoom + 0.1)}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => updatePreviewZoom(1)}
+                      className="rounded-lg bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-100"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                ) : null}
+              </div>
               {previewUrl ? (
-                <iframe src={previewUrl} className="h-[360px] w-full rounded-3xl border border-white/10 bg-white sm:h-[520px]" />
+                <div className="h-[360px] overflow-auto rounded-3xl border border-white/10 bg-white [scrollbar-color:#94a3b8_#f1f5f9] [scrollbar-width:thin] sm:h-[520px] [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-track]:bg-slate-100">
+                  <div
+                    style={{
+                      width: `${previewZoom * 100}%`,
+                      minWidth: "100%",
+                      minHeight: "100%",
+                      height: previewIsImage ? "auto" : `${previewZoom * 520}px`,
+                    }}
+                  >
+                    {previewIsImage ? (
+                      <img src={previewUrl} alt="Uploaded document preview" className="block h-auto w-full max-w-none bg-white" />
+                    ) : (
+                      <iframe title="Uploaded document preview" src={previewUrl} className="block h-full w-full bg-white" />
+                    )}
+                  </div>
+                </div>
               ) : (
                 <div className="grid h-[360px] place-items-center rounded-3xl bg-white/5 text-slate-400 sm:h-[520px]">No preview</div>
               )}
