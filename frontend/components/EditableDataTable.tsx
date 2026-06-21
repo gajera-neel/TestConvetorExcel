@@ -8,6 +8,11 @@ type Props = {
   onChange: (columns: string[], rows: Record<string, string>[]) => void;
 };
 
+type IndexedRow = {
+  row: Record<string, string>;
+  originalIndex: number;
+};
+
 const PAGE_SIZE = 1000;
 const ROW_HEIGHT = 58;
 const OVERSCAN_ROWS = 8;
@@ -20,11 +25,15 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
   const tableScrollRef = useRef<HTMLDivElement>(null);
 
   const safeColumns = columns.length ? columns : ["Column"];
-  const filtered = useMemo(() => {
+  const filtered = useMemo<IndexedRow[]>(() => {
     const lower = query.toLowerCase();
-    const base = rows.filter((row) => JSON.stringify(row).toLowerCase().includes(lower));
+    const base = rows
+      .map((row, originalIndex) => ({ row, originalIndex }))
+      .filter((item) => JSON.stringify(item.row).toLowerCase().includes(lower));
     if (!sortColumn) return base;
-    return [...base].sort((a, b) => String(a[sortColumn] || "").localeCompare(String(b[sortColumn] || ""), undefined, { numeric: true }));
+    return [...base].sort((a, b) =>
+      String(a.row[sortColumn] || "").localeCompare(String(b.row[sortColumn] || ""), undefined, { numeric: true })
+    );
   }, [query, rows, sortColumn]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -36,8 +45,9 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
   const bottomSpacerHeight = Math.max(0, (pageRows.length - virtualEnd) * ROW_HEIGHT);
   const tableWidth = safeColumns.length * 240 + 120;
 
-  function updateCell(rowIndex: number, column: string, value: string) {
-    const originalIndex = rows.indexOf(visibleRows[rowIndex]);
+  function updateCell(visibleIndex: number, column: string, value: string) {
+    const originalIndex = visibleRows[visibleIndex]?.originalIndex;
+    if (originalIndex === undefined) return;
     const next = [...rows];
     next[originalIndex] = { ...next[originalIndex], [column]: value };
     onChange(safeColumns, next);
@@ -47,9 +57,10 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
     onChange(safeColumns, [...rows, Object.fromEntries(safeColumns.map((column) => [column, ""]))]);
   }
 
-  function deleteRow(rowIndex: number) {
-    const target = visibleRows[rowIndex];
-    onChange(safeColumns, rows.filter((row) => row !== target));
+  function deleteRow(visibleIndex: number) {
+    const originalIndex = visibleRows[visibleIndex]?.originalIndex;
+    if (originalIndex === undefined) return;
+    onChange(safeColumns, rows.filter((_, rowIndex) => rowIndex !== originalIndex));
   }
 
   function removeLastRow() {
@@ -179,8 +190,8 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
                 <td colSpan={safeColumns.length + 1} style={{ height: topSpacerHeight }} className="border-0 p-0" />
               </tr>
             ) : null}
-            {visibleRows.map((row, rowIndex) => (
-              <tr key={`${page}-${virtualStart + rowIndex}`} className="h-[58px] odd:bg-slate-50/60 hover:bg-blue-50/50">
+            {visibleRows.map(({ row, originalIndex }, rowIndex) => (
+              <tr key={`${page}-${originalIndex}`} className="h-[58px] odd:bg-slate-50/60 hover:bg-blue-50/50">
                 {safeColumns.map((column) => (
                   <td key={column} className="w-[240px] min-w-[240px] whitespace-nowrap border-b border-slate-100 p-2">
                     <input

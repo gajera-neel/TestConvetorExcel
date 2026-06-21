@@ -11,7 +11,22 @@ function valueOf(item: ChartPoint) {
   return Number(item.value ?? item.count ?? item.amount ?? 0);
 }
 
-export function ChartBars({ title, data }: { title: string; data: ChartPoint[] }) {
+function formatValue(value: number, format?: "number" | "currency") {
+  if (format === "currency") {
+    return `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  }
+  return value.toLocaleString("en-IN");
+}
+
+export function ChartBars({
+  title,
+  data,
+  format = "number",
+}: {
+  title: string;
+  data: ChartPoint[];
+  format?: "number" | "currency";
+}) {
   const max = Math.max(...data.map(valueOf), 1);
 
   return (
@@ -38,7 +53,7 @@ export function ChartBars({ title, data }: { title: string; data: ChartPoint[] }
                   className="block h-full rounded-full bg-blue-600"
                 />
               </div>
-              <strong className="text-right text-slate-800">{value}</strong>
+              <strong className="text-right text-slate-800">{formatValue(value, format)}</strong>
             </div>
           );
         })}

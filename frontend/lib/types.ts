@@ -27,10 +27,18 @@ export type DashboardData = {
     total_uploads?: number;
     total_bills?: number;
     total_amount?: string;
+    average_bill_amount?: string;
+    highest_bill_amount?: string;
+    unique_vendors?: number;
+    todays_uploads?: number;
   };
+  uploads_by_day?: ChartPoint[];
+  amount_trend?: ChartPoint[];
+  bill_categories?: ChartPoint[];
   extraction_activity: ChartPoint[];
   file_types: ChartPoint[];
   data_volume: ChartPoint[];
+  top_vendors?: ChartPoint[];
   recent_uploads: RecentUpload[];
 };
 
@@ -49,4 +57,7 @@ export type RecentUpload = {
   detected_type: string;
   confidence?: number;
   uploaded_at: string;
+  vendor?: string;
+  amount?: string;
+  rows_count?: number;
 };

@@ -24,11 +24,20 @@ export default function UploadPage() {
   const confidence = useMemo(() => Math.round((result?.confidence || 0) * 100), [result]);
   const previewIsImage = previewMime.startsWith("image/");
 
-  function logExtractionDebug(file: File, data: UploadResult) {
-    const tableRows = data.extracted_fields.rows.length ? data.extracted_fields.rows : [data.extracted_fields.fields];
+  function cleanObject<T extends Record<string, unknown>>(item: T): Partial<T> {
+    return Object.fromEntries(
+      Object.entries(item).filter(([, value]) => value !== null && value !== undefined && value !== "")
+    ) as Partial<T>;
+  }
 
-    console.groupCollapsed(`[DocExcel] Extraction result: ${file.name}`);
-    console.info("Summary", {
+  function cleanRows(items: Record<string, string>[]) {
+    return items.map((item) => cleanObject(item)).filter((item) => Object.keys(item).length > 0);
+  }
+
+  function logExtractionDebug(file: File, data: UploadResult) {
+    const tableRows = cleanRows(data.extracted_fields.rows.length ? data.extracted_fields.rows : [data.extracted_fields.fields]);
+    const fields = cleanObject(data.extracted_fields.fields);
+    const summary = cleanObject({
       id: data.id,
       filename: data.filename,
       fileType: data.file_type,
@@ -37,11 +46,14 @@ export default function UploadPage() {
       rowCount: tableRows.length,
       columnCount: data.extracted_fields.columns.length,
     });
-    console.info("Columns", data.extracted_fields.columns);
-    console.table(tableRows);
-    console.info("Fields", data.extracted_fields.fields);
-    console.info("Raw OCR text", data.extracted_text);
-    console.info("Extraction logs", data.logs);
+
+    console.groupCollapsed(`[DocExcel] Extraction result: ${file.name}`);
+    console.info("Summary", summary);
+    if (data.extracted_fields.columns.length) console.info("Columns", data.extracted_fields.columns);
+    if (tableRows.length) console.table(tableRows);
+    if (Object.keys(fields).length) console.info("Fields", fields);
+    if (data.extracted_text) console.info("Raw OCR text", data.extracted_text);
+    if (data.logs.length) console.info("Extraction logs", data.logs);
     console.info("Full API response", data);
     console.groupEnd();
   }

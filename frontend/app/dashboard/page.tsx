@@ -38,10 +38,23 @@ export default function DashboardPage() {
         {dashboard ? (
           <>
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <MetricCard label="Uploads" value={dashboard.metrics.uploads} detail="Temporary sessions" />
-              <MetricCard label="Bills" value={dashboard.metrics.bills} detail="Bill, invoice, receipt" />
+              <MetricCard label="Total Bill Value" value={dashboard.metrics.total_amount || "₹0.00"} detail="Sum of detected bill amounts" />
+              <MetricCard label="Average Bill" value={dashboard.metrics.average_bill_amount || "₹0.00"} detail="Average processed amount" />
+              <MetricCard label="Bills Processed" value={dashboard.metrics.bills} detail={`${dashboard.metrics.uploads} total uploads`} />
               <MetricCard label="Success Rate" value={`${dashboard.metrics.success_rate}%`} detail="OCR confidence average" />
-              <MetricCard label="Total Records" value={dashboard.metrics.total_records} detail="Extracted table rows" />
+            </section>
+
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricCard label="Extracted Rows" value={dashboard.metrics.total_records} detail="Line items and table rows" />
+              <MetricCard label="Unique Vendors" value={dashboard.metrics.unique_vendors || 0} detail="Detected vendors/shops" />
+              <MetricCard label="Highest Bill" value={dashboard.metrics.highest_bill_amount || "₹0.00"} detail="Largest bill amount" />
+              <MetricCard label="Today Uploads" value={dashboard.metrics.todays_uploads || 0} detail="Files uploaded today" />
+            </section>
+
+            <section className="grid gap-5 xl:grid-cols-3">
+              <ChartBars title="Amount Trend" data={dashboard.amount_trend || []} format="currency" />
+              <ChartBars title="Bill Categories" data={dashboard.bill_categories || []} />
+              <ChartBars title="Top Vendors" data={dashboard.top_vendors || []} format="currency" />
             </section>
 
             <section className="grid gap-5 xl:grid-cols-3">
@@ -58,10 +71,14 @@ export default function DashboardPage() {
               <div className="grid gap-3">
                 {dashboard.recent_uploads.length ? (
                   dashboard.recent_uploads.map((file) => (
-                    <div key={`${file.filename}-${file.uploaded_at}`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white md:grid-cols-[1fr_130px_120px_170px] md:items-center">
-                      <strong className="min-w-0 truncate text-slate-900">{file.filename}</strong>
+                    <div key={`${file.filename}-${file.uploaded_at}`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white lg:grid-cols-[1.4fr_1fr_120px_110px_170px] lg:items-center">
+                      <div className="min-w-0">
+                        <strong className="block truncate text-slate-900">{file.filename}</strong>
+                        <span className="text-xs text-slate-500">{file.vendor || "Vendor not detected"}</span>
+                      </div>
                       <span className="rounded-full bg-blue-50 px-3 py-1 text-center text-sm text-blue-700">{file.detected_type}</span>
-                      <span className="text-sm text-slate-600">{Math.round((file.confidence || 0) * 100)}% confidence</span>
+                      <strong className="text-sm text-slate-900">{file.amount || "₹0.00"}</strong>
+                      <span className="text-sm text-slate-600">{file.rows_count || 0} rows</span>
                       <small className="text-slate-500">{file.uploaded_at}</small>
                     </div>
                   ))
