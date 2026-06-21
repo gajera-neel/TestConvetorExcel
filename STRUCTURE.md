@@ -82,8 +82,8 @@ Important files:
 - `frontend/app/dashboard/page.tsx`: metrics cards, charts, recent files.
 - `frontend/app/excel-export/page.tsx`: final preview and Excel download.
 - `frontend/components/AppShell.tsx`: sidebar and mobile navigation.
-- `frontend/components/EditableDataTable.tsx`: dynamic columns, editable cells, add row, delete row, rename column, search, sort, pagination.
-- `frontend/lib/api.ts`: connects frontend to FastAPI backend at `http://127.0.0.1:8000`.
+- `frontend/components/EditableDataTable.tsx`: dynamic columns, editable cells, add row, delete row, rename column, search, sort, pagination, table-only vertical and horizontal scrolling.
+- `frontend/lib/api.ts`: connects frontend to FastAPI backend using `NEXT_PUBLIC_API_URL`, with local fallback to `http://127.0.0.1:8000`.
 
 Frontend libraries:
 
@@ -269,7 +269,7 @@ http://127.0.0.1:3000/dashboard
 http://127.0.0.1:3000/excel-export
 ```
 
-## How Frontend And Backend Connect
+## How Frontend And Backend Connect Locally
 
 The frontend API helper is:
 
@@ -277,13 +277,210 @@ The frontend API helper is:
 frontend/lib/api.ts
 ```
 
-It calls:
+It calls this by default while developing locally:
 
 ```text
 http://127.0.0.1:8000
 ```
 
 Backend must be running before upload/extract/export works.
+
+For deployment, set:
+
+```text
+NEXT_PUBLIC_API_URL=https://your-backend-url.onrender.com
+```
+
+Current deployed backend URL:
+
+```text
+https://test-convetor-excel-backend.onrender.com
+```
+
+## Deploy Project Online Step By Step
+
+This project needs two deployments:
+
+1. Backend API on Render.
+2. Frontend website on Vercel.
+
+The frontend must know the backend URL through `NEXT_PUBLIC_API_URL`.
+
+### 1. Push Code To GitHub
+
+Initialize and push the repository:
+
+```powershell
+cd D:\project
+git init
+git add .
+git commit -m "Initial commit for document to Excel MVP."
+git branch -M main
+git remote add origin https://github.com/gajera-neel/TestConvetorExcel.git
+git push -u origin main
+```
+
+The project is currently pushed here:
+
+```text
+https://github.com/gajera-neel/TestConvetorExcel
+```
+
+### 2. Deploy Backend On Render
+
+Open:
+
+```text
+https://render.com
+```
+
+Choose:
+
+```text
+New + -> Web Service
+```
+
+Do not choose Static Site, PostgreSQL, or Background Worker.
+
+Use these settings:
+
+```text
+Repository: TestConvetorExcel
+Branch: main
+Runtime: Python 3
+Region: Singapore
+Instance Type: Free
+Root Directory: leave empty
+Build Command: pip install -r requirements.txt
+Start Command: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+Environment Variables: leave empty
+```
+
+Click:
+
+```text
+Deploy Web Service
+```
+
+After deploy, open the Render URL. Expected response:
+
+```json
+{"message":"Document Intelligence API is running"}
+```
+
+Current live backend:
+
+```text
+https://test-convetor-excel-backend.onrender.com
+```
+
+### 3. Deploy Frontend On Vercel
+
+Open:
+
+```text
+https://vercel.com
+```
+
+Choose:
+
+```text
+Add New -> Project
+```
+
+Import:
+
+```text
+TestConvetorExcel
+```
+
+Use these settings:
+
+```text
+Application Preset / Framework Preset: Next.js
+Root Directory: frontend
+Install Command: npm install
+Build Command: npm run build
+Output Directory: leave empty / Next.js default
+```
+
+Add environment variable:
+
+```text
+Key: NEXT_PUBLIC_API_URL
+Value: https://test-convetor-excel-backend.onrender.com
+Environment: Production and Preview
+```
+
+If Vercel shows Development separately, it can be ignored for production deployment.
+
+Click:
+
+```text
+Deploy
+```
+
+Current live frontend:
+
+```text
+https://test-convetor-excel.vercel.app
+```
+
+### 4. Fix Common Vercel Deployment Error
+
+If Vercel shows:
+
+```text
+No Output Directory named "public" found after the Build completed.
+```
+
+Fix:
+
+1. Go to Vercel project.
+2. Open `Settings`.
+3. Open `Build and Deployment`.
+4. Set `Framework Preset` to `Next.js`.
+5. Turn off Output Directory override.
+6. Output Directory should be empty / Next.js default, not `public`.
+7. Save.
+8. Go to `Deployments`.
+9. Redeploy the latest failed deployment.
+
+### 5. Test Live Website
+
+Open:
+
+```text
+https://test-convetor-excel.vercel.app
+```
+
+Test in this order:
+
+1. Upload `samples/sample_bill.txt`.
+2. Check extracted rows in Extraction Review table.
+3. Test table vertical and horizontal scroll.
+4. Add/remove row.
+5. Add/remove column.
+6. Click Generate Excel.
+7. Confirm `.xlsx` file downloads.
+
+### 6. Render Free Plan Notes
+
+Render free backend can sleep when unused.
+
+First request after sleep can take 30 to 60 seconds. If first upload is slow but second upload is faster, this is normal.
+
+OCR for scanned PDFs and images is slower than text files because the backend must preprocess the file and run OCR.
+
+### 7. Image OCR Deployment Note
+
+Image OCR depends on Tesseract. Local Windows uses:
+
+```text
+C:\Program Files\Tesseract-OCR\tesseract.exe
+```
+
+Cloud Linux servers may need separate Tesseract installation. If image OCR fails on Render, check Render logs and add system package installation for Tesseract.
 
 ## Excel Notes
 
