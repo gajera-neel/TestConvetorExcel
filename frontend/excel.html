@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Excel Download | Document Intelligence</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body data-page="excel">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span>AI</span>
+        <h1>Doc Intelligence</h1>
+        <p>Bill digitization dashboard</p>
+      </div>
+      <nav class="nav">
+        <a href="upload.html" data-nav="upload">1. Upload</a>
+        <a href="dashboard.html" data-nav="dashboard">2. Dashboard</a>
+        <a href="excel.html" data-nav="excel">3. Excel Download</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <h2>Excel Download</h2>
+          <p class="subtitle">Generate `bill_report_YYYYMMDD.xlsx` with Raw Data, Summary, and Dashboard Metrics.</p>
+        </div>
+        <button id="downloadBtn" class="btn" type="button">Download Excel</button>
+      </header>
+
+      <section class="section glass">
+        <h2>Latest Extraction Preview</h2>
+        <p class="muted">The Excel report uses all stored upload history.</p>
+        <div class="table-wrap">
+          <table>
+            <thead id="rawHead"></thead>
+            <tbody id="rawBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="js/excel.js"></script>
+</body>
+</html>

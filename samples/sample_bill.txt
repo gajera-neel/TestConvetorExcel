@@ -1,0 +1,12 @@
+Bright Mart
+Invoice No: INV-2026-001
+Date: 21/06/2026
+Phone: 9876543210
+Customer: Walk-in Customer
+Payment Method: UPI
+
+Rice Bag 2 550.00 1100.00
+Cooking Oil 1 180.00 180.00
+Discount 30.00
+GST 64.00
+Total 1314.00

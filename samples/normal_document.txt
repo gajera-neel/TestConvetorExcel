@@ -1,0 +1,5 @@
+Meeting Notes
+Date: 21/06/2026
+
+This is a normal text document used to test document extraction.
+It does not contain invoice totals or bill details.

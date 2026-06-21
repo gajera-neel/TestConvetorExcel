@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background: #f3f6fb;
+  color: #0f172a;
+  overflow-x: hidden;
+}
+
+.glass-card {
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #0f172a, #1d4ed8);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.floating-orb {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(26px);
+  opacity: 0.55;
+}
+
+.premium-border {
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-border::before {
+  content: none;
+}
+
+.soft-grid {
+  background-image: linear-gradient(#f1f5f9 1px, transparent 1px), linear-gradient(90deg, #f1f5f9 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@media (max-width: 640px) {
+  body {
+    background: #f3f6fb;
+  }
+}

@@ -1,0 +1,266 @@
+[
+  {
+    "id": "500f0c1d7d5e4cc880df38f0ef70f11c",
+    "filename": "sample_bill.txt",
+    "file_type": "txt",
+    "detected_type": "invoice",
+    "confidence": 1.0,
+    "uploaded_at": "2026-06-21T12:43:10",
+    "fields": {
+      "Invoice Number": "INV-2026-001",
+      "Date": "21/06/2026",
+      "Phone": "9876543210",
+      "Customer": "Walk-in Customer",
+      "Payment Method": "UPI",
+      "Gst": "64.00",
+      "Discount": "30.00",
+      "Total": "1314.00",
+      "Store Name": "Bright Mart"
+    },
+    "rows": [
+      {
+        "Item": "Rice Bag",
+        "Amount": "1100.00",
+        "Rate": "550.00",
+        "Qty": "2"
+      },
+      {
+        "Item": "Cooking Oil",
+        "Amount": "180.00",
+        "Rate": "180.00",
+        "Qty": "1"
+      }
+    ],
+    "extracted_text": "Bright Mart\nInvoice No: INV-2026-001\nDate: 21/06/2026\nPhone: 9876543210\nCustomer: Walk-in Customer\nPayment Method: UPI\n\nRice Bag 2 550.00 1100.00\nCooking Oil 1 180.00 180.00\nDiscount 30.00\nGST 64.00\nTotal 1314.00\n"
+  },
+  {
+    "id": "84d86af84a0843b5bb62a208335205d9",
+    "filename": "Lighthouse Report Viewer.pdf",
+    "file_type": "pdf",
+    "detected_type": "bill",
+    "confidence": 0.9,
+    "uploaded_at": "2026-06-21T12:58:56",
+    "fields": {
+      "Https": "//orgfarm-a9a82ace1b-dev-ed.develop.my.salesforce-sites.com/",
+      "Show Audits Relevant To": "All FCP LCP TBT CLS",
+      "Warnings": "The following bot user agents are blocked from crawling: bingbot, DuckDuckBot, archive.org_bot.",
+      "Captured At May 4, 2026, 5": "50 PM Emulated Desktop with Lighthouse Single page session",
+      "Gmt+5": "30 13.0.2",
+      "Discount": "LCP request overy",
+      "Total": "Blocking Time Cumulative Layout Shift",
+      "Payment Method": "or from a Chrome profile without extensions.",
+      "Store Name": "httpsorgfarm-a9a82ace1b-dev-ed.develop.my.salesforce-sites.com"
+    },
+    "rows": [
+      {
+        "Item": "https://orgfarm-aaaceb-dev-ed.develop.my.salesforce-sites.com/",
+        "Amount": "1.00",
+        "Rate": "82.00"
+      },
+      {
+        "Item": "\u2013\u2013\u2013",
+        "Amount": "100.00",
+        "Rate": "90.00",
+        "Qty": "0"
+      },
+      {
+        "Item": "s s",
+        "Amount": "1.30",
+        "Rate": "1.00",
+        "Qty": "1.0"
+      },
+      {
+        "Item": "ms",
+        "Amount": "0.00",
+        "Rate": "840.00",
+        "Qty": "840"
+      },
+      {
+        "Item": "Render-blocking requests \u2014 Est savings of ms",
+        "Amount": "200.00",
+        "Qty": "200"
+      },
+      {
+        "Item": "rd parties",
+        "Amount": "3.00"
+      },
+      {
+        "Item": "Minimize main-thread work \u2014 s",
+        "Amount": "4.20",
+        "Qty": "4.2"
+      },
+      {
+        "Item": "Reduce JavaScript execution time \u2014 s",
+        "Amount": "1.40",
+        "Qty": "1.4"
+      },
+      {
+        "Item": "Page prevented back/forward cache restoration \u2014 failure reason",
+        "Amount": "1.00",
+        "Qty": "1"
+      },
+      {
+        "Item": "Reduce unused CSS \u2014 Est savings of KiB",
+        "Amount": "1500.00",
+        "Qty": "1"
+      },
+      {
+        "Item": "Reduce unused JavaScript \u2014 Est savings of KiB",
+        "Amount": "3990.00",
+        "Qty": "3"
+      },
+      {
+        "Item": "Avoid long main-thread tasks \u2014 long tasks found",
+        "Amount": "11.00",
+        "Qty": "11"
+      },
+      {
+        "Item": "Avoid non-composited animations \u2014 animated element found",
+        "Amount": "1.00",
+        "Qty": "1"
+      },
+      {
+        "Item": "PASSED AUDITS () Show",
+        "Amount": "15.00",
+        "Qty": "15"
+      },
+      {
+        "Item": "ADDITIONAL ITEMS TO MANUALLY CHECK () Show",
+        "Amount": "10.00",
+        "Qty": "10"
+      },
+      {
+        "Item": "PASSED AUDITS () Show",
+        "Amount": "10.00",
+        "Qty": "10"
+      },
+      {
+        "Item": "NOT APPLICABLE () Show",
+        "Amount": "40.00",
+        "Qty": "40"
+      },
+      {
+        "Item": "Uses deprecated APIs \u2014 warning found",
+        "Amount": "1.00",
+        "Qty": "1"
+      },
+      {
+        "Item": "PASSED AUDITS () Show",
+        "Amount": "11.00",
+        "Qty": "11"
+      },
+      {
+        "Item": "NOT APPLICABLE () Show",
+        "Amount": "2.00",
+        "Qty": "2"
+      },
+      {
+        "Item": "PASSED AUDITS BUT WITH WARNINGS () Hide",
+        "Amount": "1.00",
+        "Qty": "1"
+      },
+      {
+        "Item": "ADDITIONAL ITEMS TO MANUALLY CHECK () Show",
+        "Amount": "1.00",
+        "Qty": "1"
+      },
+      {
+        "Item": "PASSED AUDITS () Show",
+        "Amount": "5.00",
+        "Qty": "5"
+      },
+      {
+        "Item": "NOT APPLICABLE () Show",
+        "Amount": "1.00",
+        "Qty": "1"
+      },
+      {
+        "Item": "Captured at May,,: PM Emulated Desktop with Lighthouse Single page session",
+        "Amount": "50.00",
+        "Rate": "5.00",
+        "Qty": "4"
+      },
+      {
+        "Item": "GMT+:.",
+        "Amount": "2.00",
+        "Rate": "13.00",
+        "Qty": "5"
+      },
+      {
+        "Item": "Initial page load Custom throttling Using Chromium. with",
+        "Amount": "0.00",
+        "Rate": "147.00",
+        "Qty": "147.0"
+      },
+      {
+        "Item": "Generated by Lighthouse. | File an issue",
+        "Amount": "2.00",
+        "Rate": "13.00",
+        "Qty": "13.0"
+      }
+    ],
+    "extracted_text": "https://orgfarm-a9a82ace1b-dev-ed.develop.my.salesforce-sites.com/\n65 55 77 75\nPerformance Accessibility Best Practices SEO\nThere were issues affecting this run of Lighthouse:\nChrome extensions negatively affected this page's load performance. Try auditing the page in incognito\nmode or from a Chrome profile without extensions.\n65\nPerformance\nValues are estimated and may vary. The performance score is\ncalculated directly from these metrics.See calculator.\n0\u201349 50\u201389 90\u2013100\nMETRICS Expand view\nFirst Contentful Paint Largest Contentful Paint\n1.0 s 1.3 s\nTotal Blocking Time Cumulative Layout Shift\n840 ms 0\nSpeed Index\n1.9 s\nShow audits relevant to: All FCP LCP TBT CLS\nINSIGHTS\nRender-blocking requests \u2014 Est savings of 200 ms\nForced reflow\nLCP request discovery\n\nNetwork dependency tree\nLCP breakdown\n3rd parties\nThese insights are also available in the Chrome DevTools Performance Panel - record a trace to view more detailed information.\nDIAGNOSTICS\nMinimize main-thread work \u2014 4.2 s\nReduce JavaScript execution time \u2014 1.4 s\nPage prevented back/forward cache restoration \u2014 1 failure reason\nImage elements do not have explicit width and height\nReduce unused CSS \u2014 Est savings of 1,500 KiB\nReduce unused JavaScript \u2014 Est savings of 3,990 KiB\nAvoid long main-thread tasks \u2014 11 long tasks found\nAvoid non-composited animations \u2014 1 animated element found\nMore information about the performance of your application. These numbers don't directly affect the Performance score.\nPASSED AUDITS (15) Show\n55\nAccessibility\nThese checks highlight opportunities to improve the accessibility of your\nweb app. Automatic detection can only detect a subset of issues and does\nnot guarantee the accessibility of your web app, so manual testing is also\nencouraged.\nNAMES AND LABELS\n\nButtons do not have an accessible name\nImage elements do not have [alt] attributes\nDocument doesn't have a <title> element\nLinks do not have a discernible name\nThese are opportunities to improve the semantics of the controls in your application. This may enhance the experience for users of\nassistive technology, like a screen reader.\nARIA\n[aria-hidden=\"true\"] elements contain focusable descendents\nThese are opportunities to improve the usage of ARIA in your application which may enhance the experience for users of assistive\ntechnology, like a screen reader.\nCONTRAST\nBackground and foreground colors do not have a sufficient contrast ratio.\nThese are opportunities to improve the legibility of your content.\nBEST PRACTICES\nTouch targets do not have sufficient size or spacing.\nDocument does not have a main landmark.\nIdentical links have the same purpose.\nThese items highlight common accessibility best practices.\nNAVIGATION\nHeading elements are not in a sequentially-descending order\nThese are opportunities to improve keyboard navigation in your application.\nADDITIONAL ITEMS TO MANUALLY CHECK (10) Show\nThese items address areas which an automated testing tool cannot cover. Learn more in our guide on conducting an accessibility review.\nPASSED AUDITS (10) Show\n\nNOT APPLICABLE (40) Show\n77\nBest Practices\nGENERAL\nUses deprecated APIs \u2014 1 warning found\nDetected JavaScript libraries\nBROWSER COMPATIBILITY\nPage lacks the HTML doctype, thus triggering quirks-mode\nDocument contains a `doctype` that triggers `limited-quirks-mode`\nTRUST AND SAFETY\nEnsure CSP is effective against XSS attacks\nUse a strong HSTS policy\nEnsure proper origin isolation with COOP\nMitigate DOM-based XSS with Trusted Types\nPASSED AUDITS (11) Show\nNOT APPLICABLE (2) Show\n\n75\nSEO\nThese checks ensure that your page is following basic search engine\noptimization advice. There are many additional factors Lighthouse does not\nscore here that may affect your search ranking, including performance on\nCore Web Vitals. Learn more about Google Search Essentials.\nCONTENT BEST PRACTICES\nDocument doesn't have a <title> element\nDocument does not have a meta description\nImage elements do not have [alt] attributes\nFormat your HTML in a way that enables crawlers to better understand your app\u2019s content.\nPASSED AUDITS BUT WITH WARNINGS (1) Hide\nPage isn\u2019t blocked from indexing\nWarnings: The following bot user agents are blocked from crawling: bingbot, DuckDuckBot, archive.org_bot.\nThe audit is otherwise passing, because at least one bot was explicitly allowed.\nADDITIONAL ITEMS TO MANUALLY CHECK (1) Show\nRun these additional validators on your site to check additional SEO best practices.\nPASSED AUDITS (5) Show\nNOT APPLICABLE (1) Show\nCaptured at May 4, 2026, 5:50 PM Emulated Desktop with Lighthouse Single page session\nGMT+5:30 13.0.2\n\nInitial page load Custom throttling Using Chromium 147.0.0.0 with\ndevtools\nGenerated by Lighthouse 13.0.2 | File an issue"
+  },
+  {
+    "id": "4fb019bc54da4f33950c3810c0549f56",
+    "filename": "sample_gst_invoice_testing.pdf",
+    "file_type": "pdf",
+    "detected_type": "invoice",
+    "confidence": 0.9,
+    "uploaded_at": "2026-06-21T13:02:51",
+    "fields": {
+      "Invoice Number": "INV-TEST-001",
+      "Date": "21/06/2026",
+      "Seller": "Demo Tech Solutions Pvt. Ltd.",
+      "Gst": "900.00",
+      "Address": "Ahmedabad, Gujarat",
+      "Buyer": "Test Customer",
+      "Total": "11800.00",
+      "Note": "Demo invoice only \u2014 testing/training purpose.",
+      "Customer": "Buyer: Test"
+    },
+    "rows": [
+      {
+        "Item": "Web Development Service n n",
+        "Amount": "10000.00",
+        "Rate": "10000.00",
+        "Qty": "1"
+      }
+    ],
+    "extracted_text": "SAMPLE GST INVOICE (TEST DATA)\nInvoice No: INV-TEST-001\nInvoice Date: 21/06/2026\nSeller: Demo Tech Solutions Pvt. Ltd.\nGSTIN: 24ABCDE1234F1Z5\nAddress: Surat, Gujarat\nBuyer: Test Customer\nGSTIN: 24PQRSX5678K1Z2\nAddress: Ahmedabad, Gujarat\nDescription Qty Rate Amount\nWeb Development Service 1 n10,000 n10,000\nSubtotal: n10,000\nCGST (9%): n900\nSGST (9%): n900\nTotal Amount: n11,800\nNote: Demo invoice only \u2014 testing/training purpose."
+  },
+  {
+    "id": "95234a68c6d9492489f95fddf60634b1",
+    "filename": "sample_bill.txt",
+    "file_type": "txt",
+    "detected_type": "invoice",
+    "confidence": 1.0,
+    "uploaded_at": "2026-06-21T13:22:20",
+    "fields": {
+      "Invoice Number": "INV-2026-001",
+      "Date": "21/06/2026",
+      "Phone": "9876543210",
+      "Customer": "Walk-in Customer",
+      "Payment Method": "UPI",
+      "Gst": "64.00",
+      "Discount": "30.00",
+      "Total": "1314.00",
+      "Store Name": "Bright Mart"
+    },
+    "rows": [
+      {
+        "Item": "Rice Bag",
+        "Amount": "1100.00",
+        "Rate": "550.00",
+        "Qty": "2"
+      },
+      {
+        "Item": "Cooking Oil",
+        "Amount": "180.00",
+        "Rate": "180.00",
+        "Qty": "1"
+      }
+    ],
+    "extracted_text": "Bright Mart\nInvoice No: INV-2026-001\nDate: 21/06/2026\nPhone: 9876543210\nCustomer: Walk-in Customer\nPayment Method: UPI\n\nRice Bag 2 550.00 1100.00\nCooking Oil 1 180.00 180.00\nDiscount 30.00\nGST 64.00\nTotal 1314.00\n"
+  }
+]

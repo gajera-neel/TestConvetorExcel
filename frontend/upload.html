@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload | Document Intelligence</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body data-page="upload">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span>AI</span>
+        <h1>Doc Intelligence</h1>
+        <p>Bill digitization dashboard</p>
+      </div>
+      <nav class="nav">
+        <a href="upload.html" data-nav="upload">1. Upload</a>
+        <a href="dashboard.html" data-nav="dashboard">2. Dashboard</a>
+        <a href="excel.html" data-nav="excel">3. Excel Download</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <h2>Upload Document</h2>
+          <p class="subtitle">Drop image, PDF, bill, invoice, or text file.</p>
+        </div>
+        <a class="btn" href="dashboard.html">View Dashboard</a>
+      </header>
+
+      <section class="glass upload-card">
+        <div id="dropZone" class="drop-zone">
+          <div>
+            <div class="upload-icon">⬡</div>
+            <h3>Drop image, PDF, bill, invoice, or text file</h3>
+            <p class="muted">Supported: JPG, PNG, PDF, TXT</p>
+            <input id="fileInput" type="file" accept=".jpg,.jpeg,.png,.pdf,.txt" hidden />
+            <button id="uploadBtn" class="btn" type="button">Upload Button</button>
+          </div>
+        </div>
+
+        <div id="preview" class="preview glass hidden">
+          <img id="previewImage" alt="File preview" class="hidden" />
+          <div>
+            <strong id="fileName">No file selected</strong>
+            <p id="fileMeta" class="muted"></p>
+            <div class="progress"><i id="progressBar"></i></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="resultSection" class="section glass hidden">
+        <div class="topbar">
+          <div>
+            <h2>Raw Data Table</h2>
+            <p class="subtitle">Dynamic columns, editable cells, search, sort, add row, delete row.</p>
+          </div>
+          <div>
+            <strong>Confidence: <span id="confidenceScore">-</span></strong>
+            <p class="muted">Detected: <span id="detectedType">-</span></p>
+          </div>
+        </div>
+
+        <div class="table-tools">
+          <input id="tableSearch" type="search" placeholder="Search extracted rows..." />
+          <button id="addRowBtn" class="btn" type="button">Add Row</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead id="rawHead"></thead>
+            <tbody id="rawBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="textSection" class="section glass hidden">
+        <h2>Full Extracted Text</h2>
+        <textarea id="extractedText" rows="10" readonly></textarea>
+      </section>
+
+      <section id="logsSection" class="section glass hidden">
+        <h2>Extraction Logs</h2>
+        <ul id="logs" class="logs"></ul>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="js/upload.js"></script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard | Document Intelligence</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body data-page="dashboard">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span>AI</span>
+        <h1>Doc Intelligence</h1>
+        <p>Bill digitization dashboard</p>
+      </div>
+      <nav class="nav">
+        <a href="upload.html" data-nav="upload">1. Upload</a>
+        <a href="dashboard.html" data-nav="dashboard">2. Dashboard</a>
+        <a href="excel.html" data-nav="excel">3. Excel Download</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <h2>Analytics Dashboard</h2>
+          <p class="subtitle">Live refresh from upload history.</p>
+        </div>
+        <button id="refreshBtn" class="btn" type="button">Refresh</button>
+      </header>
+
+      <section class="grid">
+        <article class="metric glass"><span>Total Uploads</span><strong id="totalUploads">0</strong></article>
+        <article class="metric glass"><span>Total Bills</span><strong id="totalBills">0</strong></article>
+        <article class="metric glass"><span>Total Amount</span><strong id="totalAmount">0.00</strong></article>
+        <article class="metric glass"><span>Unique Vendors</span><strong id="uniqueVendors">0</strong></article>
+        <article class="metric glass"><span>Today's Uploads</span><strong id="todaysUploads">0</strong></article>
+      </section>
+
+      <section class="section glass">
+        <h2>Uploads by Day</h2>
+        <div id="uploadsByDay"></div>
+      </section>
+
+      <section class="section glass">
+        <h2>Amount Trend</h2>
+        <div id="amountTrend"></div>
+      </section>
+
+      <section class="section glass">
+        <h2>Bill Categories</h2>
+        <div id="billCategories"></div>
+      </section>
+
+      <section class="section glass">
+        <h2>Recent Uploads</h2>
+        <ul id="recentUploads" class="recent"></ul>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>
