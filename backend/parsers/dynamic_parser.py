@@ -7,11 +7,14 @@ DATE_RE = re.compile(r"\b(?:\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|\d{4}[-/.]\d{1,2}[-/
 
 ALIASES = {
     "store name": ("store", "vendor", "company", "shop", "merchant"),
+    "seller": ("seller", "supplier"),
     "invoice number": ("invoice no", "invoice number", "inv no", "bill no", "receipt no"),
     "date": ("date", "bill date", "invoice date"),
-    "gst": ("gst", "gstin", "cgst", "sgst", "igst"),
+    "gst number": ("gstin", "gst no", "gst number"),
+    "gst amount": ("gst amount", "cgst", "sgst", "igst", "gst"),
     "phone": ("phone", "mobile", "contact"),
     "customer": ("customer", "customer name", "billed to"),
+    "buyer": ("buyer", "bill to", "billed to"),
     "tax": ("tax", "vat"),
     "discount": ("discount", "disc"),
     "total": ("grand total", "net total", "total amount", "amount due", "total"),
@@ -78,7 +81,7 @@ def _extract_amount_fields(lines: list[str], fields: dict[str, str]) -> None:
 
         amount = _clean_amount(amounts[-1])
         for canonical, labels in ALIASES.items():
-            if canonical not in {"tax", "discount", "total", "gst"}:
+            if canonical not in {"tax", "discount", "total", "gst amount"}:
                 continue
             if any(label in lowered for label in labels):
                 fields[canonical.title()] = amount
@@ -156,7 +159,25 @@ def _ordered_columns(source: list[dict[str, str]] | dict[str, str]) -> list[str]
             if value and column not in discovered:
                 discovered.append(column)
 
-    preferred = ["Item", "Description", "Qty", "Rate", "Amount"]
+    preferred = [
+        "Bill Name",
+        "Invoice Number",
+        "Date",
+        "Customer",
+        "Buyer",
+        "Phone",
+        "GST Number",
+        "Item",
+        "Description",
+        "Qty",
+        "Rate",
+        "Amount",
+        "GST Amount",
+        "Tax",
+        "Discount",
+        "Total",
+        "Payment Method",
+    ]
     ordered = [column for column in preferred if column in discovered]
     ordered.extend(column for column in discovered if column not in ordered)
     return ordered
@@ -166,17 +187,59 @@ def _normalize_rows(rows: list[dict[str, str]], columns: list[str]) -> list[dict
     return [{column: row.get(column, "") for column in columns} for row in rows]
 
 
+def _first_value(fields: dict[str, str], labels: tuple[str, ...]) -> str:
+    for label in labels:
+        value = fields.get(label)
+        if value:
+            return value
+    return ""
+
+
+def _bill_context(fields: dict[str, str]) -> dict[str, str]:
+    context = {
+        "Bill Name": _first_value(fields, ("Store Name", "Seller", "Vendor", "Company")),
+        "Invoice Number": fields.get("Invoice Number", ""),
+        "Date": fields.get("Date", ""),
+        "Customer": fields.get("Customer", ""),
+        "Buyer": fields.get("Buyer", ""),
+        "Phone": fields.get("Phone", ""),
+        "GST Number": fields.get("Gst Number", ""),
+        "GST Amount": fields.get("Gst Amount", ""),
+        "Tax": fields.get("Tax", ""),
+        "Discount": fields.get("Discount", ""),
+        "Total": fields.get("Total", ""),
+        "Payment Method": fields.get("Payment Method", ""),
+    }
+    return {key: value for key, value in context.items() if value}
+
+
+def _attach_bill_context(rows: list[dict[str, str]], fields: dict[str, str]) -> list[dict[str, str]]:
+    context = _bill_context(fields)
+    if not context or not rows:
+        return rows
+    return [{**context, **row} for row in rows]
+
+
+def _derive_bill_name(first_line: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9 &.,'-]", " ", first_line)
+    cleaned = re.sub(r"\b(?:tax\s+invoice|invoice|receipt|bill)\b", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip(" -:|")
+    return cleaned
+
+
 def parse_dynamic_data(text: str, detected_type: str) -> dict:
     lines = [line.strip() for line in text.replace("\r", "\n").splitlines() if line.strip()]
     fields = _extract_label_value_fields(lines)
     _extract_amount_fields(lines, fields)
 
     if lines and "Store Name" not in fields:
-        first_line = re.sub(r"[^A-Za-z0-9 &.,'-]", "", lines[0]).strip()
-        if first_line and not any(word in first_line.lower() for word in ("invoice", "receipt", "bill")):
+        first_line = _derive_bill_name(lines[0])
+        if first_line:
             fields["Store Name"] = first_line
 
     rows = _extract_line_rows(lines)
+    if rows:
+        rows = _attach_bill_context(rows, fields)
     if not rows and fields:
         rows = [fields.copy()]
 
