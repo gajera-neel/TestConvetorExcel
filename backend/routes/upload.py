@@ -60,6 +60,11 @@ async def upload_file(file: UploadFile = File(...)):
             status_code=500,
             detail="Tesseract OCR is not installed or not available in PATH.",
         ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Extraction failed on server: {exc}",
+        ) from exc
 
     parsed = parse_dynamic_data(document["extracted_text"], document["detected_type"])
     session = save_session(

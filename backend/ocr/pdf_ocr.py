@@ -4,6 +4,8 @@ import pdfplumber
 
 from ocr.image_ocr import extract_image_text
 
+MAX_OCR_PDF_PAGES = 3
+
 
 def _render_pdf_pages(file_path: Path) -> list[Path]:
     try:
@@ -13,9 +15,9 @@ def _render_pdf_pages(file_path: Path) -> list[Path]:
 
     rendered_paths = []
     pdf = pdfium.PdfDocument(str(file_path))
-    for index in range(len(pdf)):
+    for index in range(min(len(pdf), MAX_OCR_PDF_PAGES)):
         page = pdf[index]
-        bitmap = page.render(scale=2).to_pil()
+        bitmap = page.render(scale=1.4).to_pil()
         image_path = file_path.with_name(f"{file_path.stem}_page_{index + 1}.png")
         bitmap.save(image_path)
         rendered_paths.append(image_path)
@@ -37,7 +39,7 @@ def extract_pdf_text(file_path: Path) -> tuple[str, float, list[str]]:
         logs.append("PDF text layer found")
         return extracted, 0.9, logs
 
-    logs.append("No PDF text layer found, using OCR fallback")
+    logs.append(f"No PDF text layer found, using OCR fallback for first {MAX_OCR_PDF_PAGES} page(s)")
     ocr_text = []
     confidences = []
     rendered_paths = _render_pdf_pages(file_path)

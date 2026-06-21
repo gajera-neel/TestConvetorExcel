@@ -44,6 +44,9 @@ def extract_image_text(file_path: Path) -> tuple[str, float, list[str]]:
         for config in configs:
             try:
                 text = pytesseract.image_to_string(image, config=config, timeout=25).strip()
+            except pytesseract.TesseractNotFoundError:
+                logs.append("Tesseract is not installed on this server; image OCR was skipped")
+                return "", 0.0, logs
             except RuntimeError:
                 logs.append("One OCR pass timed out and was skipped")
                 continue
