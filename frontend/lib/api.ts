@@ -1,6 +1,6 @@
 import type { DashboardData, UploadResult } from "./types";
 
-export const API_BASE = "http://127.0.0.1:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 export const LATEST_KEY = "doc_excel_latest_extraction";
 
 export async function uploadFile(file: File, onProgress?: (value: number) => void): Promise<UploadResult> {
