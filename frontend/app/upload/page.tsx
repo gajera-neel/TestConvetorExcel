@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { AppShell } from "@/components/AppShell";
 import { EditableDataTable } from "@/components/EditableDataTable";
 import { GlassPanel } from "@/components/GlassPanel";
-import { generateExcel, uploadFile } from "@/lib/api";
+import { generateExcel, uploadFile, warmBackend } from "@/lib/api";
 import type { UploadResult } from "@/lib/types";
 
 export default function UploadPage() {
@@ -21,11 +21,18 @@ export default function UploadPage() {
 
   const confidence = useMemo(() => Math.round((result?.confidence || 0) * 100), [result]);
 
+  useEffect(() => {
+    warmBackend();
+  }, []);
+
   async function handleFile(file?: File) {
     if (!file) return;
     setPreviewUrl(URL.createObjectURL(file));
     setLoading(true);
     setProgress(8);
+    const progressTimer = window.setInterval(() => {
+      setProgress((value) => (value < 82 ? value + 3 : value));
+    }, 900);
 
     try {
       const data = await uploadFile(file, setProgress);
@@ -37,6 +44,7 @@ export default function UploadPage() {
       alert(error instanceof Error ? error.message : "Upload failed");
       setProgress(0);
     } finally {
+      window.clearInterval(progressTimer);
       setLoading(false);
     }
   }

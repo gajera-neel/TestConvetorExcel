@@ -3,6 +3,14 @@ import type { DashboardData, UploadResult } from "./types";
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 export const LATEST_KEY = "doc_excel_latest_extraction";
 
+export async function warmBackend(): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/`, { cache: "no-store" });
+  } catch {
+    // Warming is best-effort; upload will still show the real error if the API is unavailable.
+  }
+}
+
 export async function uploadFile(file: File, onProgress?: (value: number) => void): Promise<UploadResult> {
   const formData = new FormData();
   formData.append("file", file);
