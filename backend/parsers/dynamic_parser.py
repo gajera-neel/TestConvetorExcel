@@ -106,27 +106,64 @@ def _extract_line_rows(lines: list[str]) -> list[dict[str, str]]:
         if any(word in lowered for word in skip):
             continue
 
-        amounts = MONEY_RE.findall(line)
-        if not amounts:
+        row = _parse_item_row(line)
+        if not row:
             continue
-
-        description = MONEY_RE.sub("", line).strip(" -:|")
-        description = re.sub(r"\s{2,}", " ", description)
-        if len(description) < 2:
-            continue
-
-        row = {
-            "Item": description,
-            "Amount": _clean_amount(amounts[-1]),
-        }
-        if len(amounts) > 1:
-            row["Rate"] = _clean_amount(amounts[-2])
-        qty_match = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:x|qty|pcs|pc)?\b", line, re.IGNORECASE)
-        if qty_match:
-            row["Qty"] = qty_match.group(1)
         rows.append(row)
 
-    return rows[:50]
+    return rows
+
+
+def _parse_item_row(line: str) -> dict[str, str] | None:
+    tokens = line.replace("|", " ").split()
+    if len(tokens) < 2:
+        return None
+
+    numeric_tail: list[str] = []
+    while tokens and MONEY_RE.fullmatch(tokens[-1].strip()):
+        numeric_tail.insert(0, tokens.pop())
+
+    if not numeric_tail or not tokens:
+        return None
+
+    if len(numeric_tail) > 3:
+        tokens.extend(numeric_tail[:-3])
+        numeric_tail = numeric_tail[-3:]
+
+    description = re.sub(r"\s{2,}", " ", " ".join(tokens).strip(" -:|"))
+    if len(description) < 2:
+        return None
+
+    row = {"Item": description}
+    if len(numeric_tail) >= 3:
+        row["Qty"] = _clean_amount(numeric_tail[-3]).rstrip("0").rstrip(".")
+        row["Rate"] = _clean_amount(numeric_tail[-2])
+        row["Amount"] = _clean_amount(numeric_tail[-1])
+    elif len(numeric_tail) == 2:
+        row["Rate"] = _clean_amount(numeric_tail[-2])
+        row["Amount"] = _clean_amount(numeric_tail[-1])
+    else:
+        row["Amount"] = _clean_amount(numeric_tail[-1])
+
+    return row
+
+
+def _ordered_columns(source: list[dict[str, str]] | dict[str, str]) -> list[str]:
+    rows = source if isinstance(source, list) else [source]
+    discovered = []
+    for row in rows:
+        for column, value in row.items():
+            if value and column not in discovered:
+                discovered.append(column)
+
+    preferred = ["Item", "Description", "Qty", "Rate", "Amount"]
+    ordered = [column for column in preferred if column in discovered]
+    ordered.extend(column for column in discovered if column not in ordered)
+    return ordered
+
+
+def _normalize_rows(rows: list[dict[str, str]], columns: list[str]) -> list[dict[str, str]]:
+    return [{column: row.get(column, "") for column in columns} for row in rows]
 
 
 def parse_dynamic_data(text: str, detected_type: str) -> dict:
@@ -143,7 +180,8 @@ def parse_dynamic_data(text: str, detected_type: str) -> dict:
     if not rows and fields:
         rows = [fields.copy()]
 
-    columns = sorted({column for row in rows for column in row.keys()} | set(fields.keys()))
+    columns = _ordered_columns(rows if rows else fields)
+    rows = _normalize_rows(rows, columns)
 
     return {
         "columns": columns,
