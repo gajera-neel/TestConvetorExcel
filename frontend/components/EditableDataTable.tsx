@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type WheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
   columns: string[];
@@ -85,21 +85,27 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
     onChange(nextColumns, nextRows);
   }
 
-  function handleTableWheel(event: WheelEvent<HTMLDivElement>) {
-    const tableScroller = tableScrollRef.current;
-    if (!tableScroller) return;
+  useEffect(() => {
+    const currentScroller = tableScrollRef.current;
+    if (!currentScroller) return;
+    const scroller: HTMLDivElement = currentScroller;
 
-    event.preventDefault();
-    event.stopPropagation();
+    function handleWheel(event: globalThis.WheelEvent) {
+      event.preventDefault();
+      event.stopPropagation();
 
-    if (event.shiftKey) {
-      tableScroller.scrollLeft += event.deltaY || event.deltaX;
-      return;
+      if (event.shiftKey) {
+        scroller.scrollLeft += event.deltaY || event.deltaX;
+        return;
+      }
+
+      scroller.scrollTop += event.deltaY;
+      scroller.scrollLeft += event.deltaX;
     }
 
-    tableScroller.scrollTop += event.deltaY;
-    tableScroller.scrollLeft += event.deltaX;
-  }
+    scroller.addEventListener("wheel", handleWheel, { passive: false });
+    return () => scroller.removeEventListener("wheel", handleWheel);
+  }, []);
 
   return (
     <div className="flex h-[calc(100vh-220px)] min-h-[520px] min-w-0 flex-col overflow-hidden">
@@ -139,7 +145,6 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
         onScroll={(event) => {
           setScrollTop(event.currentTarget.scrollTop);
         }}
-        onWheel={handleTableWheel}
         className="min-h-0 w-full max-w-full flex-1 scroll-smooth overflow-x-auto overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white shadow-sm [scrollbar-color:#94a3b8_#f1f5f9] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-track]:bg-slate-100"
       >
         <table style={{ width: tableWidth }} className="min-w-full table-fixed border-collapse text-sm">

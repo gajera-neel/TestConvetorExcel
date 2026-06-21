@@ -21,6 +21,28 @@ export default function UploadPage() {
 
   const confidence = useMemo(() => Math.round((result?.confidence || 0) * 100), [result]);
 
+  function logExtractionDebug(file: File, data: UploadResult) {
+    const tableRows = data.extracted_fields.rows.length ? data.extracted_fields.rows : [data.extracted_fields.fields];
+
+    console.groupCollapsed(`[DocExcel] Extraction result: ${file.name}`);
+    console.info("Summary", {
+      id: data.id,
+      filename: data.filename,
+      fileType: data.file_type,
+      detectedType: data.detected_type,
+      confidence: data.confidence,
+      rowCount: tableRows.length,
+      columnCount: data.extracted_fields.columns.length,
+    });
+    console.info("Columns", data.extracted_fields.columns);
+    console.table(tableRows);
+    console.info("Fields", data.extracted_fields.fields);
+    console.info("Raw OCR text", data.extracted_text);
+    console.info("Extraction logs", data.logs);
+    console.info("Full API response", data);
+    console.groupEnd();
+  }
+
   useEffect(() => {
     warmBackend();
   }, []);
@@ -36,11 +58,13 @@ export default function UploadPage() {
 
     try {
       const data = await uploadFile(file, setProgress);
+      logExtractionDebug(file, data);
       setResult(data);
       setColumns(data.extracted_fields.columns);
       setRows(data.extracted_fields.rows.length ? data.extracted_fields.rows : [data.extracted_fields.fields]);
       setRecent((items) => [file.name, ...items.filter((item) => item !== file.name)].slice(0, 6));
     } catch (error) {
+      console.error("[DocExcel] Upload failed", { fileName: file.name, error });
       alert(error instanceof Error ? error.message : "Upload failed");
       setProgress(0);
     } finally {
