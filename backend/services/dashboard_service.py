@@ -4,7 +4,7 @@ from decimal import Decimal, InvalidOperation
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from services.bill_service import list_bills
+from services.bill_service import delete_bill, get_bill, list_bills
 
 
 def _amount_from_record(record: dict) -> Decimal:
@@ -18,11 +18,23 @@ def _amount_from_record(record: dict) -> Decimal:
     return _decimal_from_value(value)
 
 
+def _tax_from_record(record: dict) -> Decimal:
+    fields = record.get("fields", {})
+    return _decimal_from_value(
+        record.get("tax")
+        or record.get("gst_amount")
+        or fields.get("Tax")
+        or fields.get("GST Amount")
+        or fields.get("Gst Amount")
+        or "0"
+    )
+
+
 def _decimal_from_value(value: object) -> Decimal:
-    cleaned = str(value).replace(",", "").replace("₹", "").replace("$", "").strip()
+    cleaned = str(value).replace(",", "").replace("₹", "").replace("$", "").replace("Rs.", "").strip()
     try:
         return Decimal(cleaned)
-    except InvalidOperation:
+    except (InvalidOperation, ValueError):
         return Decimal("0")
 
 
@@ -47,34 +59,57 @@ def _recent_upload(record: dict) -> dict:
     }
 
 
-def build_dashboard(db: Session) -> dict:
+def _uploaded_bill(record: dict) -> dict:
+    return {
+        "id": record.get("id", ""),
+        "filename": record.get("filename", "Untitled document"),
+        "bill_name": record.get("bill_name") or record.get("fields", {}).get("Bill Name") or record.get("filename", ""),
+        "uploaded_at": record.get("uploaded_at", ""),
+        "file_type": record.get("file_type", ""),
+        "detected_type": record.get("detected_type", ""),
+        "amount": _format_money(_amount_from_record(record)),
+        "vendor": _vendor_from_record(record),
+        "status": record.get("status", "processed"),
+        "confidence": record.get("confidence", 0),
+        "rows_count": len(record.get("rows") or []),
+    }
+
+
+def _empty_global_dashboard() -> dict:
+    return {
+        "mode": "global",
+        "metrics": {
+            "uploads": 0,
+            "bills": 0,
+            "success_rate": 0,
+            "total_records": 0,
+            "total_uploads": 0,
+            "total_bills": 0,
+            "total_amount": "₹0.00",
+            "total_tax": "₹0.00",
+            "average_bill_amount": "₹0.00",
+            "highest_bill_amount": "₹0.00",
+            "unique_vendors": 0,
+            "todays_uploads": 0,
+        },
+        "uploads_by_day": [],
+        "amount_trend": [],
+        "bill_categories": [],
+        "extraction_activity": [],
+        "file_types": [],
+        "data_volume": [],
+        "top_vendors": [],
+        "recent_uploads": [],
+        "uploaded_bills": [],
+    }
+
+
+def get_global_dashboard(db: Session) -> dict:
     history = list_bills(db)
     today = date.today().isoformat()
 
     if not history:
-        return {
-            "metrics": {
-                "uploads": 0,
-                "bills": 0,
-                "success_rate": 0,
-                "total_records": 0,
-                "total_uploads": 0,
-                "total_bills": 0,
-                "total_amount": "₹0.00",
-                "average_bill_amount": "₹0.00",
-                "highest_bill_amount": "₹0.00",
-                "unique_vendors": 0,
-                "todays_uploads": 0,
-            },
-            "uploads_by_day": [],
-            "amount_trend": [],
-            "bill_categories": [],
-            "extraction_activity": [],
-            "file_types": [],
-            "data_volume": [],
-            "top_vendors": [],
-            "recent_uploads": [],
-        }
+        return _empty_global_dashboard()
 
     frame = pd.DataFrame(history)
     frame["day"] = frame["uploaded_at"].str.slice(0, 10)
@@ -105,6 +140,7 @@ def build_dashboard(db: Session) -> dict:
 
     total_bills = frame["detected_type"].isin(["bill", "invoice", "receipt"]).sum()
     total_amount = sum(frame["amount"], Decimal("0"))
+    total_tax = sum((_tax_from_record(record) for record in history), Decimal("0"))
     amount_values = [amount for amount in frame["amount"].tolist() if amount > 0]
     average_amount = (total_amount / len(amount_values)) if amount_values else Decimal("0")
     highest_amount = max(amount_values, default=Decimal("0"))
@@ -119,6 +155,7 @@ def build_dashboard(db: Session) -> dict:
     )
 
     return {
+        "mode": "global",
         "metrics": {
             "uploads": int(len(history)),
             "bills": int(total_bills),
@@ -127,6 +164,7 @@ def build_dashboard(db: Session) -> dict:
             "total_uploads": int(len(history)),
             "total_bills": int(total_bills),
             "total_amount": _format_money(total_amount),
+            "total_tax": _format_money(total_tax),
             "average_bill_amount": _format_money(average_amount),
             "highest_bill_amount": _format_money(highest_amount),
             "unique_vendors": int(frame["vendor"].replace("Unknown Vendor", pd.NA).dropna().nunique()),
@@ -145,5 +183,88 @@ def build_dashboard(db: Session) -> dict:
             {"label": "Uploads", "value": int(len(history))},
         ],
         "top_vendors": [{"label": item["vendor"], "value": float(item["amount"])} for item in top_vendors],
-        "recent_uploads": [_recent_upload(record) for record in history[-8:][::-1]],
+        "recent_uploads": [_recent_upload(record) for record in history[:8]],
+        "uploaded_bills": [_uploaded_bill(record) for record in history],
     }
+
+
+def get_bill_dashboard(db: Session, bill_id: str) -> dict | None:
+    record = get_bill(db, bill_id)
+    if not record:
+        return None
+
+    fields = record.get("fields") or {}
+    rows = record.get("rows") or []
+    columns = record.get("columns") or []
+    amount = _amount_from_record(record)
+    tax = _tax_from_record(record)
+    confidence = float(record.get("confidence") or 0)
+
+    amount_breakdown = [
+        {"label": "Amount", "value": float(amount)},
+        {"label": "Tax", "value": float(tax)},
+    ]
+    row_summary = [
+        {"label": "Rows", "value": len(rows)},
+        {"label": "Columns", "value": len(columns)},
+        {"label": "Fields", "value": len([value for value in fields.values() if value])},
+    ]
+
+    return {
+        "mode": "single",
+        "bill_id": bill_id,
+        "metrics": {
+            "uploads": 1,
+            "bills": 1 if str(record.get("detected_type", "")).lower() in {"bill", "invoice", "receipt"} else 0,
+            "success_rate": int(round(confidence * 100)),
+            "total_records": len(rows),
+            "total_uploads": 1,
+            "total_bills": 1,
+            "total_amount": _format_money(amount),
+            "total_tax": _format_money(tax),
+            "average_bill_amount": _format_money(amount),
+            "highest_bill_amount": _format_money(amount),
+            "unique_vendors": 1 if _vendor_from_record(record) != "Unknown Vendor" else 0,
+            "todays_uploads": 1 if str(record.get("uploaded_at", "")).startswith(date.today().isoformat()) else 0,
+        },
+        "bill": {
+            **_uploaded_bill(record),
+            "fields": fields,
+            "rows": rows,
+            "columns": columns,
+            "extracted_text": record.get("extracted_text", ""),
+            "preview_url": record.get("preview_url", ""),
+            "invoice_number": record.get("invoice_number", ""),
+            "bill_date": record.get("bill_date", ""),
+            "customer": record.get("customer", ""),
+            "tax": _format_money(tax),
+            "total": _format_money(amount),
+            "raw_json": record,
+        },
+        "summary": [
+            {"label": "Vendor", "value": _vendor_from_record(record)},
+            {"label": "Upload Date", "value": record.get("uploaded_at", "")},
+            {"label": "File Type", "value": record.get("file_type", "")},
+            {"label": "Status", "value": record.get("status", "processed")},
+            {"label": "Confidence", "value": f"{int(round(confidence * 100))}%"},
+        ],
+        "amount_trend": [{"label": record.get("bill_name") or record.get("filename", "Bill"), "value": float(amount)}],
+        "bill_categories": [{"label": record.get("detected_type") or "document", "value": 1}],
+        "extraction_activity": row_summary,
+        "file_types": [{"label": record.get("file_type") or "file", "value": 1}],
+        "data_volume": row_summary,
+        "top_vendors": [{"label": _vendor_from_record(record), "value": float(amount)}],
+        "amount_breakdown": amount_breakdown,
+        "recent_uploads": [_recent_upload(record)],
+        "uploaded_bills": [_uploaded_bill(item) for item in list_bills(db)],
+    }
+
+
+def delete_bill_and_refresh(db: Session, bill_id: str) -> dict | None:
+    if not delete_bill(db, bill_id):
+        return None
+    return get_global_dashboard(db)
+
+
+def build_dashboard(db: Session) -> dict:
+    return get_global_dashboard(db)

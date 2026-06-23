@@ -33,12 +33,31 @@ export async function uploadFile(file: File, onProgress?: (value: number) => voi
   return data;
 }
 
-export async function getDashboard(): Promise<DashboardData> {
-  const response = await fetch(`${API_BASE}/dashboard`, { cache: "no-store" });
+export async function getDashboard(billId?: string | null): Promise<DashboardData> {
+  const url = billId ? `${API_BASE}/dashboard?bill_id=${encodeURIComponent(billId)}` : `${API_BASE}/dashboard`;
+  const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
-    throw new Error("Dashboard load failed");
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Dashboard load failed");
   }
   return response.json();
+}
+
+export async function deleteBill(billId: string): Promise<DashboardData> {
+  const response = await fetch(`${API_BASE}/bill/${encodeURIComponent(billId)}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Delete failed");
+  }
+
+  const payload = (await response.json()) as { dashboard?: DashboardData };
+  if (!payload.dashboard) {
+    return getDashboard();
+  }
+  return payload.dashboard;
 }
 
 export async function generateExcel(rows: Record<string, string>[], columns: string[], sessionId?: string): Promise<Blob> {

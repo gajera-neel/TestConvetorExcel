@@ -1,104 +1,140 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { ChartBars } from "@/components/ChartBars";
-import { GlassPanel } from "@/components/GlassPanel";
-import { MetricCard } from "@/components/MetricCard";
+import { BillDetailsPanel } from "@/components/BillDetailsPanel";
+import { DashboardOverview } from "@/components/DashboardOverview";
+import { DeleteBillModal } from "@/components/DeleteBillModal";
 import { Skeleton } from "@/components/Skeleton";
-import { getDashboard } from "@/lib/api";
-import type { DashboardData } from "@/lib/types";
+import { deleteBill, getDashboard } from "@/lib/api";
+import type { DashboardData, UploadedBill } from "@/lib/types";
 
-export default function DashboardPage() {
+function DashboardContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedBillId = searchParams.get("bill") || searchParams.get("bill_id");
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<UploadedBill | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
-  async function loadDashboard() {
-    setDashboard(await getDashboard());
-  }
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setDashboard(await getDashboard(selectedBillId));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Dashboard load failed");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedBillId]);
 
   useEffect(() => {
     loadDashboard();
     const timer = setInterval(loadDashboard, 15000);
     return () => clearInterval(timer);
-  }, []);
+  }, [loadDashboard]);
+
+  function selectBill(billId: string) {
+    router.push(`/dashboard?bill=${encodeURIComponent(billId)}`);
+  }
+
+  function backToOverall() {
+    router.push("/dashboard");
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const refreshed = await deleteBill(pendingDelete.id);
+      setPendingDelete(null);
+      setDashboard(refreshed);
+      if (selectedBillId === pendingDelete.id) {
+        router.push("/dashboard");
+      } else {
+        await loadDashboard();
+      }
+    } catch (deleteFailure) {
+      setDeleteError(deleteFailure instanceof Error ? deleteFailure.message : "Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <AppShell>
-      <div className="space-y-4 sm:space-y-5">
+      <div className="max-h-[calc(100vh-2rem)] space-y-4 overflow-y-auto pr-1 sm:space-y-5">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-slate-950">Dashboard</h2>
-            <p className="text-sm text-slate-500">Live extraction activity and uploaded document metrics.</p>
+            <h2 className="text-xl font-semibold text-slate-950">
+              {selectedBillId ? `Viewing: ${dashboard?.bill?.bill_name || dashboard?.bill?.filename || "Selected Bill"}` : "Overall Dashboard"}
+            </h2>
+            <p className="text-sm text-slate-500">
+              {selectedBillId ? "Single bill analytics from Supabase." : "Global analytics across all uploaded bills in Supabase."}
+            </p>
           </div>
-          <button onClick={loadDashboard} className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+          <button
+            onClick={loadDashboard}
+            disabled={loading}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+          >
             Refresh
           </button>
         </header>
 
-        {dashboard ? (
-          <>
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <MetricCard label="Total Bill Value" value={dashboard.metrics.total_amount || "₹0.00"} detail="Sum of detected bill amounts" />
-              <MetricCard label="Average Bill" value={dashboard.metrics.average_bill_amount || "₹0.00"} detail="Average processed amount" />
-              <MetricCard label="Bills Processed" value={dashboard.metrics.bills} detail={`${dashboard.metrics.uploads} total uploads`} />
-              <MetricCard label="Success Rate" value={`${dashboard.metrics.success_rate}%`} detail="OCR confidence average" />
-            </section>
+        {error ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
 
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <MetricCard label="Extracted Rows" value={dashboard.metrics.total_records} detail="Line items and table rows" />
-              <MetricCard label="Unique Vendors" value={dashboard.metrics.unique_vendors || 0} detail="Detected vendors/shops" />
-              <MetricCard label="Highest Bill" value={dashboard.metrics.highest_bill_amount || "₹0.00"} detail="Largest bill amount" />
-              <MetricCard label="Today Uploads" value={dashboard.metrics.todays_uploads || 0} detail="Files uploaded today" />
-            </section>
-
-            <section className="grid gap-5 xl:grid-cols-3">
-              <ChartBars title="Amount Trend" data={dashboard.amount_trend || []} format="currency" />
-              <ChartBars title="Bill Categories" data={dashboard.bill_categories || []} />
-              <ChartBars title="Top Vendors" data={dashboard.top_vendors || []} format="currency" />
-            </section>
-
-            <section className="grid gap-5 xl:grid-cols-3">
-              <ChartBars title="Extraction Activity" data={dashboard.extraction_activity || []} />
-              <ChartBars title="File Types" data={dashboard.file_types || []} />
-              <ChartBars title="Data Volume" data={dashboard.data_volume || []} />
-            </section>
-
-            <GlassPanel>
-              <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="text-xl font-bold">Recent Documents</h3>
-                <span className="text-sm text-slate-400">Auto updates</span>
-              </div>
-              <div className="grid gap-3">
-                {dashboard.recent_uploads.length ? (
-                  dashboard.recent_uploads.map((file) => (
-                    <div key={`${file.filename}-${file.uploaded_at}`} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-white lg:grid-cols-[1.4fr_1fr_120px_110px_170px] lg:items-center">
-                      <div className="min-w-0">
-                        <strong className="block truncate text-slate-900">{file.filename}</strong>
-                        <span className="text-xs text-slate-500">{file.vendor || "Vendor not detected"}</span>
-                      </div>
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-center text-sm text-blue-700">{file.detected_type}</span>
-                      <strong className="text-sm text-slate-900">{file.amount || "₹0.00"}</strong>
-                      <span className="text-sm text-slate-600">{file.rows_count || 0} rows</span>
-                      <small className="text-slate-500">{file.uploaded_at}</small>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-                    No documents uploaded yet. Upload a file to build dashboard data.
-                  </div>
-                )}
-              </div>
-            </GlassPanel>
-          </>
-        ) : (
+        {loading && !dashboard ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Skeleton className="h-36" />
             <Skeleton className="h-36" />
             <Skeleton className="h-36" />
             <Skeleton className="h-36" />
           </div>
+        ) : dashboard && selectedBillId ? (
+          <BillDetailsPanel
+            dashboard={dashboard}
+            onBack={backToOverall}
+            onSelectBill={selectBill}
+            onDeleteBill={setPendingDelete}
+          />
+        ) : dashboard ? (
+          <DashboardOverview
+            dashboard={dashboard}
+            onSelectBill={selectBill}
+            onDeleteBill={setPendingDelete}
+          />
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+            Dashboard is empty. Upload a bill to start analytics.
+          </div>
         )}
       </div>
+      <DeleteBillModal
+        bill={pendingDelete}
+        deleting={deleting}
+        error={deleteError}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={confirmDelete}
+      />
     </AppShell>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-36" />}>
+      <DashboardContent />
+    </Suspense>
   );
 }

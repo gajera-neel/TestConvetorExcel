@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from config.database import get_db
-from services.bill_service import delete_bill, get_bill, import_old_temp_json, list_bills
+from services.bill_service import get_bill, import_old_temp_json, list_bills
+from services.dashboard_service import delete_bill_and_refresh
 
 
 router = APIRouter()
@@ -23,9 +24,10 @@ def get_bill_by_id(bill_id: str, db: Session = Depends(get_db)):
 
 @router.delete("/bill/{bill_id}")
 def delete_bill_by_id(bill_id: str, db: Session = Depends(get_db)):
-    if not delete_bill(db, bill_id):
+    dashboard = delete_bill_and_refresh(db, bill_id)
+    if dashboard is None:
         raise HTTPException(status_code=404, detail="Bill not found")
-    return {"deleted": True, "id": bill_id}
+    return {"deleted": True, "id": bill_id, "dashboard": dashboard}
 
 
 @router.post("/migrate-old-json")

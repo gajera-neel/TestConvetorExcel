@@ -716,6 +716,25 @@ Current UI style:
 - Mobile top navigation
 - Responsive upload/review/export pages
 
+## Dashboard Analytics Modes
+
+The dashboard supports two Supabase-backed modes:
+
+- `/dashboard` opens the global dashboard and calculates totals across all stored bills.
+- `/dashboard?bill=<bill_id>` opens a single bill dashboard without page navigation.
+
+Global mode shows total bills, total amount, total tax, average bill amount, upload count, amount trend, top vendors, bill categories, recent uploads, and the full uploaded bills list.
+
+Single bill mode shows the selected bill name, upload date, vendor, extracted fields, amount, tax, table rows, summary, confidence, generated charts, and raw extraction preview.
+
+Deleting a bill uses:
+
+```text
+DELETE /bill/{id}
+```
+
+After delete, the backend returns refreshed global dashboard data so metric cards, charts, uploaded bills, and recent uploads update immediately.
+
 ## Test Files
 
 Upload these first:

@@ -19,6 +19,8 @@ export type UploadResult = {
 };
 
 export type DashboardData = {
+  mode?: "global" | "single";
+  bill_id?: string;
   metrics: {
     uploads: number;
     bills: number;
@@ -27,6 +29,7 @@ export type DashboardData = {
     total_uploads?: number;
     total_bills?: number;
     total_amount?: string;
+    total_tax?: string;
     average_bill_amount?: string;
     highest_bill_amount?: string;
     unique_vendors?: number;
@@ -39,7 +42,11 @@ export type DashboardData = {
   file_types: ChartPoint[];
   data_volume: ChartPoint[];
   top_vendors?: ChartPoint[];
+  amount_breakdown?: ChartPoint[];
   recent_uploads: RecentUpload[];
+  uploaded_bills?: UploadedBill[];
+  bill?: BillDashboardDetail;
+  summary?: SummaryItem[];
 };
 
 export type ChartPoint = {
@@ -60,4 +67,37 @@ export type RecentUpload = {
   vendor?: string;
   amount?: string;
   rows_count?: number;
+};
+
+export type UploadedBill = {
+  id: string;
+  filename: string;
+  bill_name?: string;
+  uploaded_at: string;
+  file_type: string;
+  detected_type: string;
+  amount: string;
+  vendor: string;
+  status: string;
+  confidence?: number;
+  rows_count?: number;
+};
+
+export type BillDashboardDetail = UploadedBill & {
+  fields: Record<string, string>;
+  rows: Record<string, string>[];
+  columns: string[];
+  extracted_text: string;
+  preview_url?: string;
+  invoice_number?: string;
+  bill_date?: string;
+  customer?: string;
+  tax?: string;
+  total?: string;
+  raw_json?: Record<string, unknown>;
+};
+
+export type SummaryItem = {
+  label: string;
+  value: string | number;
 };
