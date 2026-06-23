@@ -185,6 +185,13 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
             </tr>
           </thead>
           <tbody>
+            {!pageRows.length ? (
+              <tr>
+                <td colSpan={safeColumns.length + 1} className="h-44 border-b border-slate-100 p-6 text-center text-sm text-slate-500">
+                  No extracted rows yet. If this was an image or scanned PDF, check OCR logs below and try a clearer, cropped, upright document.
+                </td>
+              </tr>
+            ) : null}
             {topSpacerHeight > 0 ? (
               <tr aria-hidden="true">
                 <td colSpan={safeColumns.length + 1} style={{ height: topSpacerHeight }} className="border-0 p-0" />

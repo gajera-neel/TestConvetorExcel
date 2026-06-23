@@ -67,6 +67,10 @@ async def upload_file(file: UploadFile = File(...)):
         ) from exc
 
     parsed = parse_dynamic_data(document["extracted_text"], document["detected_type"])
+    if not document["extracted_text"].strip():
+        document["logs"].append(
+            "No readable text was extracted. Check image quality, crop/rotation, or server OCR installation."
+        )
     session = save_session(
         {
             "id": upload_id,

@@ -356,6 +356,17 @@ Start Command: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
 Environment Variables: leave empty
 ```
 
+Image/scan OCR on Render needs Linux system packages. The root `Aptfile` installs:
+
+```text
+tesseract-ocr
+libtesseract-dev
+libgl1
+libglib2.0-0
+```
+
+Keep `Aptfile` in GitHub. Render reads it during deployment and installs Tesseract for image OCR.
+
 Click:
 
 ```text
@@ -481,6 +492,55 @@ C:\Program Files\Tesseract-OCR\tesseract.exe
 ```
 
 Cloud Linux servers may need separate Tesseract installation. If image OCR fails on Render, check Render logs and add system package installation for Tesseract.
+
+This project includes `Aptfile`, so Render should install Tesseract automatically after the latest GitHub push and redeploy.
+
+## How To Push New Updates To GitHub
+
+After changing code locally, use these commands:
+
+```powershell
+cd D:\project
+git status
+git add .
+git commit -m "Describe your update"
+git push
+```
+
+Example:
+
+```powershell
+cd D:\project
+git status
+git add .
+git commit -m "Fix OCR for uploaded bill images."
+git push
+```
+
+What happens after `git push`:
+
+- Vercel automatically redeploys frontend changes from `frontend/`.
+- Render automatically redeploys backend changes from `backend/`, `requirements.txt`, and `Aptfile`.
+- If both frontend and backend changed, both platforms redeploy.
+
+If automatic deployment does not start:
+
+- Vercel: open project -> `Deployments` -> `Redeploy`.
+- Render: open backend service -> `Manual Deploy` -> `Deploy latest commit`.
+
+## OCR Troubleshooting For Uploaded Bills
+
+If an uploaded image bill shows `unknown image` and `0% confidence`, it means OCR did not read text.
+
+Check:
+
+1. Render latest deployment completed after the GitHub push.
+2. Render logs do not show Tesseract installation errors.
+3. The uploaded image is clear, upright, cropped around the bill, and not too dark.
+4. Try a smaller image first.
+5. Open browser console and check `[DocExcel] Extraction result`.
+
+When OCR works, `Extraction Logs` should include detected words and the raw OCR text should appear in the browser console.
 
 ## Excel Notes
 

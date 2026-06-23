@@ -34,6 +34,15 @@ export default function UploadPage() {
     return items.map((item) => cleanObject(item)).filter((item) => Object.keys(item).length > 0);
   }
 
+  function rowsFromExtraction(data: UploadResult) {
+    const fallbackFields = cleanObject(data.extracted_fields.fields);
+    return data.extracted_fields.rows.length
+      ? data.extracted_fields.rows
+      : Object.keys(fallbackFields).length
+      ? [fallbackFields as Record<string, string>]
+      : [];
+  }
+
   function logExtractionDebug(file: File, data: UploadResult) {
     const tableRows = cleanRows(data.extracted_fields.rows.length ? data.extracted_fields.rows : [data.extracted_fields.fields]);
     const fields = cleanObject(data.extracted_fields.fields);
@@ -76,9 +85,10 @@ export default function UploadPage() {
     try {
       const data = await uploadFile(file, setProgress);
       logExtractionDebug(file, data);
+      const nextRows = rowsFromExtraction(data);
       setResult(data);
       setColumns(data.extracted_fields.columns);
-      setRows(data.extracted_fields.rows.length ? data.extracted_fields.rows : [data.extracted_fields.fields]);
+      setRows(nextRows);
       setRecent((items) => [file.name, ...items.filter((item) => item !== file.name)].slice(0, 6));
     } catch (error) {
       console.error("[DocExcel] Upload failed", { fileName: file.name, error });
