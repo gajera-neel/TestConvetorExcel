@@ -6,6 +6,7 @@ Modern full-stack demo app for uploading bills, invoices, receipts, PDFs, and sc
 
 - Backend: Python FastAPI
 - Frontend: Next.js, Tailwind CSS, TypeScript, Framer Motion
+- Database: Supabase PostgreSQL through SQLAlchemy
 - OCR: Tesseract for images, pdfplumber plus OCR fallback for PDFs
 - Data processing: Pandas
 - Excel export: openpyxl
@@ -18,6 +19,7 @@ Upload file
 → FastAPI detects file type
 → OCR / PDF extraction runs
 → Dynamic columns and rows are generated
+→ Extraction is saved permanently to Supabase PostgreSQL
 → User edits raw data table
 → Excel file is generated
 → User downloads .xlsx
@@ -30,7 +32,13 @@ project/
 ├── backend/
 │   ├── main.py
 │   ├── config.py
+│   ├── config/
+│   │   ├── database.py
+│   │   └── supabase_client.py
+│   ├── models/
+│   │   └── bill.py
 │   ├── routes/
+│   │   ├── bills.py
 │   │   ├── upload.py
 │   │   ├── dashboard.py
 │   │   └── excel.py
@@ -60,6 +68,9 @@ project/
 │   ├── package.json
 │   └── tailwind.config.ts
 ├── samples/
+├── .cursor/
+│   └── mcp.json
+├── Aptfile
 ├── requirements.txt
 └── STRUCTURE.md
 ```
@@ -129,10 +140,24 @@ Backend libraries:
 
 Backend storage:
 
+- Supabase PostgreSQL: permanent bill/extraction records.
 - `backend/uploads/`: uploaded files.
-- `backend/temp/`: temporary JSON extraction sessions and history.
+- `backend/temp/`: temporary JSON extraction sessions, kept only for current session/export compatibility and old-data migration.
 - `backend/exports/`: generated Excel files.
-- No database is used.
+
+Runtime database path:
+
+```text
+Next.js -> FastAPI -> Supabase PostgreSQL
+```
+
+Developer database path:
+
+```text
+Cursor -> MCP -> Supabase
+```
+
+MCP is only for developer operations such as schema inspection and safe queries. The app runtime does not call MCP.
 
 ## Backend APIs
 
@@ -170,7 +195,23 @@ Input:
 
 ### `GET /dashboard`
 
-Returns dashboard metrics, uploads by day, amount trend, bill categories, and recent uploads.
+Returns dashboard metrics from Supabase PostgreSQL, uploads by day, amount trend, bill categories, top vendors, and recent uploads.
+
+### `GET /bills`
+
+Returns all persisted bills from Supabase.
+
+### `GET /bill/{id}`
+
+Returns one bill by ID.
+
+### `DELETE /bill/{id}`
+
+Deletes one bill by ID.
+
+### `POST /migrate-old-json`
+
+Imports existing records from old `backend/temp/history.json` and temp session JSON files into Supabase PostgreSQL.
 
 ### `GET /download-excel`
 
@@ -214,6 +255,16 @@ Python dependencies:
 cd D:\project
 python -m pip install -r requirements.txt
 ```
+
+Required backend environment variables are read from `backend/.env` locally or Render environment variables in production:
+
+```text
+DATABASE_URL=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+Never hardcode these values in Python files.
 
 Node/Next.js dependencies:
 
@@ -355,6 +406,16 @@ Build Command: pip install -r requirements.txt
 Start Command: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
 Environment Variables: leave empty
 ```
+
+For Supabase persistence, Render environment variables should contain:
+
+```text
+DATABASE_URL=<your Supabase PostgreSQL connection URL>
+SUPABASE_URL=<your Supabase project URL>
+SUPABASE_SERVICE_ROLE_KEY=<your Supabase service role key>
+```
+
+Do not commit these values to GitHub.
 
 Image/scan OCR on Render needs Linux system packages. The root `Aptfile` installs:
 
@@ -541,6 +602,91 @@ Check:
 5. Open browser console and check `[DocExcel] Extraction result`.
 
 When OCR works, `Extraction Logs` should include detected words and the raw OCR text should appear in the browser console.
+
+## Supabase Database Setup
+
+Backend reads database settings only from environment variables:
+
+```text
+DATABASE_URL=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+Important backend files:
+
+- `backend/config/database.py`: SQLAlchemy `engine`, `SessionLocal`, `Base`, and `init_db()`.
+- `backend/config/supabase_client.py`: Supabase service-role client helper.
+- `backend/models/bill.py`: `Bill` table model.
+- `backend/services/bill_service.py`: save, list, fetch, delete, and migrate bills.
+- `backend/routes/bills.py`: bill APIs and old JSON migration API.
+
+Bill model fields:
+
+```text
+id
+bill_name
+amount
+tax
+total
+upload_date
+raw_json
+status
+```
+
+On FastAPI startup, `init_db()` creates the `bills` table if it does not exist.
+
+### Verify Supabase Connection
+
+Run:
+
+```powershell
+cd D:\project
+python backend\scripts\verify_supabase.py
+```
+
+Expected output:
+
+```text
+Supabase connected
+MCP connected
+Dashboard persistence enabled
+```
+
+The script creates the table, inserts a temporary sample bill, fetches it, deletes it, and prints the status messages.
+
+### Migrate Old JSON Data
+
+After backend is running:
+
+```powershell
+Invoke-RestMethod -Method Post http://127.0.0.1:8000/migrate-old-json
+```
+
+For deployed backend:
+
+```powershell
+Invoke-RestMethod -Method Post https://test-convetor-excel-backend.onrender.com/migrate-old-json
+```
+
+## Cursor Supabase MCP
+
+MCP is for developer database operations only. Do not use MCP inside the FastAPI or Next.js runtime.
+
+Project MCP config:
+
+```text
+.cursor/mcp.json
+```
+
+Capabilities expected from Supabase MCP:
+
+- List tables
+- Inspect schema
+- Create table
+- Run safe queries
+
+The MCP config does not store app secrets. Set a Supabase personal access token in Cursor MCP settings, then restart Cursor or reload MCP servers.
 
 ## Excel Notes
 

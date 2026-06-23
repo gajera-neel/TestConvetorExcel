@@ -2,8 +2,9 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 
 import pandas as pd
+from sqlalchemy.orm import Session
 
-from services.history_service import load_history
+from services.bill_service import list_bills
 
 
 def _amount_from_record(record: dict) -> Decimal:
@@ -44,8 +45,8 @@ def _recent_upload(record: dict) -> dict:
     }
 
 
-def build_dashboard() -> dict:
-    history = load_history()
+def build_dashboard(db: Session) -> dict:
+    history = list_bills(db)
     today = date.today().isoformat()
 
     if not history:

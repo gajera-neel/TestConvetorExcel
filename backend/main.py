@@ -4,6 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 
 from config import UPLOAD_DIR
+from config.database import init_db
+from routes.bills import router as bills_router
 from routes.dashboard import router as dashboard_router
 from routes.excel import router as excel_router
 from routes.upload import router as upload_router
@@ -23,7 +25,13 @@ app.add_middleware(
 app.include_router(upload_router)
 app.include_router(dashboard_router)
 app.include_router(excel_router)
+app.include_router(bills_router)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+
+@app.on_event("startup")
+def startup():
+    init_db()
 
 
 @app.get("/")

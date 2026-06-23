@@ -2,10 +2,11 @@ from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
+from sqlalchemy.orm import Session
 
 from excel.generator import generate_excel_file
+from services.bill_service import list_bills
 from services.dashboard_service import build_dashboard
-from services.history_service import get_latest_record, load_history
 
 
 def _style_headers(sheet) -> None:
@@ -20,10 +21,10 @@ def _auto_width(sheet) -> None:
         sheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 2, 12), 60)
 
 
-def create_excel_report() -> Path:
-    history = load_history()
-    latest = get_latest_record()
-    dashboard = build_dashboard()
+def create_excel_report(db: Session) -> Path:
+    history = list_bills(db)
+    latest = history[0] if history else None
+    dashboard = build_dashboard(db)
     workbook = Workbook()
 
     raw_sheet = workbook.active

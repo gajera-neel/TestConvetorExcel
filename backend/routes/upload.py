@@ -1,21 +1,24 @@
 from pathlib import Path
 from uuid import uuid4
+from datetime import datetime
 
 import pytesseract
-from fastapi import APIRouter, Body, File, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
+from sqlalchemy.orm import Session
 
 from config import ALLOWED_EXTENSIONS, UPLOAD_DIR
+from config.database import get_db
 from parsers.dynamic_parser import parse_dynamic_data
 from services.dashboard_service import build_dashboard
 from services.document_service import extract_document
-from services.history_service import add_history_record
+from services.bill_service import bill_to_record, save_bill
 from services.temp_service import load_session, save_session
 
 
 router = APIRouter()
 
 
-def _build_upload_response(session: dict) -> dict:
+def _build_upload_response(session: dict, db: Session) -> dict:
     return {
         "id": session["id"],
         "filename": session["filename"],
@@ -31,13 +34,13 @@ def _build_upload_response(session: dict) -> dict:
         "confidence": session.get("confidence", 0),
         "logs": session.get("logs", []),
         "preview_url": session.get("preview_url", ""),
-        "dashboard": build_dashboard(),
+        "dashboard": build_dashboard(db),
         "history_record": session,
     }
 
 
 @router.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
@@ -71,45 +74,31 @@ async def upload_file(file: UploadFile = File(...)):
         document["logs"].append(
             "No readable text was extracted. Check image quality, crop/rotation, or server OCR installation."
         )
-    session = save_session(
-        {
-            "id": upload_id,
-            "filename": file.filename,
-            "stored_filename": safe_name,
-            "file_path": str(file_path),
-            "preview_url": f"/uploads/{safe_name}",
-            "file_type": document["file_type"],
-            "detected_type": document["detected_type"],
-            "extracted_text": document["extracted_text"],
-            "confidence": document["confidence"],
-            "logs": document["logs"],
-            "columns": parsed["columns"],
-            "rows": parsed["rows"],
-            "fields": parsed["fields"],
-        }
-    )
-    record = add_history_record(
-        {
-            "id": upload_id,
-            "filename": file.filename,
-            "file_type": document["file_type"],
-            "detected_type": document["detected_type"],
-            "confidence": document["confidence"],
-            "fields": parsed["fields"],
-            "rows": parsed["rows"],
-            "columns": parsed["columns"],
-            "file_path": str(file_path),
-            "preview_url": f"/uploads/{safe_name}",
-            "extracted_text": document["extracted_text"],
-        }
-    )
-    session["history_record"] = record
+    session_payload = {
+        "id": upload_id,
+        "filename": file.filename,
+        "stored_filename": safe_name,
+        "file_path": str(file_path),
+        "preview_url": f"/uploads/{safe_name}",
+        "file_type": document["file_type"],
+        "detected_type": document["detected_type"],
+        "extracted_text": document["extracted_text"],
+        "confidence": document["confidence"],
+        "logs": document["logs"],
+        "columns": parsed["columns"],
+        "rows": parsed["rows"],
+        "fields": parsed["fields"],
+        "uploaded_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    session = save_session(session_payload)
+    bill = save_bill(db, session_payload)
+    session["history_record"] = bill_to_record(bill)
 
-    return _build_upload_response(session)
+    return _build_upload_response(session, db)
 
 
 @router.post("/extract")
-def extract_existing(payload: dict = Body(...)):
+def extract_existing(payload: dict = Body(...), db: Session = Depends(get_db)):
     session_id = payload.get("session_id")
     if not session_id:
         raise HTTPException(status_code=400, detail="session_id is required")
@@ -136,4 +125,5 @@ def extract_existing(payload: dict = Body(...)):
         }
     )
     save_session(session)
-    return _build_upload_response(session)
+    save_bill(db, session)
+    return _build_upload_response(session, db)

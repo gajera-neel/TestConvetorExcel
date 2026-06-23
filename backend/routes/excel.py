@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
+from sqlalchemy.orm import Session
 from starlette.responses import FileResponse
 
+from config.database import get_db
 from services.excel_service import create_custom_excel, create_excel_report
 from services.temp_service import latest_session, load_session
 
@@ -9,8 +11,8 @@ router = APIRouter()
 
 
 @router.get("/download-excel")
-def download_excel():
-    report_path = create_excel_report()
+def download_excel(db: Session = Depends(get_db)):
+    report_path = create_excel_report(db)
     return FileResponse(
         report_path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

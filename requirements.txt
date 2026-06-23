@@ -8,3 +8,7 @@ pypdfium2
 opencv-python
 openpyxl
 pandas
+supabase
+sqlalchemy
+psycopg2-binary
+python-dotenv
