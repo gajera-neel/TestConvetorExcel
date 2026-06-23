@@ -125,6 +125,8 @@ export default function UploadPage() {
       if (uploadCandidate.size < file.size) {
         const savedPercent = Math.round((1 - uploadCandidate.size / file.size) * 100);
         setProcessingNote(`Compressed image by ${savedPercent}% for faster OCR. Uploading now...`);
+      } else if (file.type === "application/pdf") {
+        setProcessingNote("Uploading PDF. Large PDFs are analyzed in fast mode for quicker raw data extraction...");
       } else {
         setProcessingNote("Uploading and analyzing document...");
       }

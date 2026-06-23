@@ -4,7 +4,8 @@ import pdfplumber
 
 from ocr.image_ocr import extract_image_text
 
-MAX_OCR_PDF_PAGES = 3
+MAX_TEXT_PDF_PAGES = 12
+MAX_OCR_PDF_PAGES = 2
 
 
 def _render_pdf_pages(file_path: Path) -> list[Path]:
@@ -17,7 +18,7 @@ def _render_pdf_pages(file_path: Path) -> list[Path]:
     pdf = pdfium.PdfDocument(str(file_path))
     for index in range(min(len(pdf), MAX_OCR_PDF_PAGES)):
         page = pdf[index]
-        bitmap = page.render(scale=1.4).to_pil()
+        bitmap = page.render(scale=1.15).to_pil()
         image_path = file_path.with_name(f"{file_path.stem}_page_{index + 1}.png")
         bitmap.save(image_path)
         rendered_paths.append(image_path)
@@ -29,14 +30,18 @@ def extract_pdf_text(file_path: Path) -> tuple[str, float, list[str]]:
     text_parts = []
 
     with pdfplumber.open(file_path) as pdf:
-        for page in pdf.pages:
+        total_pages = len(pdf.pages)
+        pages_to_process = min(total_pages, MAX_TEXT_PDF_PAGES)
+        logs.append(f"PDF has {total_pages} page(s); processing first {pages_to_process} page(s) for fast extraction")
+
+        for page in pdf.pages[:pages_to_process]:
             page_text = page.extract_text()
             if page_text:
                 text_parts.append(page_text)
 
     extracted = "\n\n".join(text_parts).strip()
     if extracted:
-        logs.append("PDF text layer found")
+        logs.append(f"PDF text layer found with {len(extracted.split())} detected words")
         return extracted, 0.9, logs
 
     logs.append(f"No PDF text layer found, using OCR fallback for first {MAX_OCR_PDF_PAGES} page(s)")
