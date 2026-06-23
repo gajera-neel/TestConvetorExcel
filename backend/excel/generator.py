@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import pandas as pd
@@ -10,20 +11,28 @@ from config import EXPORT_DIR
 
 SUMMARY_COLUMNS = {
     "Bill Name",
+    "Store Name",
+    "Vendor",
+    "Seller",
     "Invoice Number",
     "Date",
     "Customer",
     "Buyer",
     "Phone",
+    "Mobile",
+    "Address",
     "GST Number",
     "GST Amount",
     "Tax",
     "Discount",
     "Total",
     "Payment Method",
+    "Payment Mode",
+    "Due Date",
+    "Place Of Supply",
 }
 
-ROW_DETAIL_COLUMNS = {"Item", "Description", "Qty", "Rate", "Amount"}
+ROW_DETAIL_COLUMNS = {"S.No", "Item", "Description", "Qty", "Rate", "GST %", "Amount"}
 
 
 def _safe_columns(columns: list[str], rows: list[dict]) -> list[str]:
@@ -37,6 +46,29 @@ def _safe_columns(columns: list[str], rows: list[dict]) -> list[str]:
 
 def _has_value(value: object) -> bool:
     return value is not None and str(value).strip() != ""
+
+
+def _to_decimal(value: object) -> Decimal | None:
+    if not _has_value(value):
+        return None
+    cleaned = str(value).replace(",", "").replace("Rs.", "").replace("INR", "").replace("₹", "").strip()
+    try:
+        return Decimal(cleaned)
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def _sum_column(rows: list[dict], column: str) -> Decimal:
+    total = Decimal("0")
+    for row in rows:
+        value = _to_decimal(row.get(column))
+        if value is not None:
+            total += value
+    return total.quantize(Decimal("0.01"))
+
+
+def _format_decimal(value: Decimal) -> str:
+    return str(value.quantize(Decimal("0.01")))
 
 
 def _split_summary_and_raw(rows: list[dict], columns: list[str]) -> tuple[dict[str, str], list[str]]:
@@ -53,6 +85,36 @@ def _split_summary_and_raw(rows: list[dict], columns: list[str]) -> tuple[dict[s
             raw_columns.append(column)
 
     return summary, raw_columns or columns
+
+
+def _build_bill_summary(rows: list[dict], summary_values: dict[str, str], raw_columns: list[str]) -> list[tuple[str, str]]:
+    summary_items = list(summary_values.items())
+
+    if "Amount" in raw_columns:
+        subtotal = _sum_column(rows, "Amount")
+        if subtotal:
+            summary_items.append(("Calculated Subtotal", _format_decimal(subtotal)))
+
+    if "Qty" in raw_columns:
+        quantity = _sum_column(rows, "Qty")
+        if quantity:
+            summary_items.append(("Calculated Quantity", _format_decimal(quantity)))
+
+    gst = _to_decimal(summary_values.get("GST Amount") or summary_values.get("Tax"))
+    discount = _to_decimal(summary_values.get("Discount"))
+    subtotal = _sum_column(rows, "Amount") if "Amount" in raw_columns else Decimal("0")
+    if subtotal and gst is not None:
+        expected_total = subtotal + gst - (discount or Decimal("0"))
+        summary_items.append(("Calculated Total Check", _format_decimal(expected_total)))
+
+    summary_items.extend(
+        [
+            ("Raw Rows", str(len(rows))),
+            ("Raw Columns", str(len(raw_columns))),
+            ("Generated At", datetime.now().isoformat(timespec="seconds")),
+        ]
+    )
+    return summary_items
 
 
 def _style_sheet(sheet, header_fill: PatternFill) -> None:
@@ -91,14 +153,10 @@ def generate_excel_file(rows: list[dict], columns: list[str] | None = None, file
         header_fill = PatternFill("solid", fgColor="1E293B")
         _style_sheet(sheet, header_fill)
 
-        summary = workbook.create_sheet("Summary")
-        summary.append(["Metric", "Value"])
-        for key, value in summary_values.items():
+        summary = workbook.create_sheet("Bill Summary")
+        summary.append(["Field", "Value"])
+        for key, value in _build_bill_summary(safe_rows, summary_values, raw_columns):
             summary.append([key, value])
-        summary.append(["Raw Rows", len(frame)])
-        summary.append(["Raw Columns", len(raw_columns)])
-        summary.append(["Moved To Summary", len(summary_values)])
-        summary.append(["Generated At", datetime.now().isoformat(timespec="seconds")])
         _style_sheet(summary, header_fill)
 
     return output_path

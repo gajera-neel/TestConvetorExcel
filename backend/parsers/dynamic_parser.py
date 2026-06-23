@@ -4,6 +4,15 @@ from decimal import Decimal, InvalidOperation
 
 MONEY_RE = re.compile(r"(?:rs\.?|inr|usd|\$|₹)?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)", re.IGNORECASE)
 DATE_RE = re.compile(r"\b(?:\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|\d{4}[-/.]\d{1,2}[-/.]\d{1,2})\b")
+ITEM_WITH_GST_RE = re.compile(
+    r"^\s*(?P<serial>\d+)\s+"
+    r"(?P<item>.+?)\s+"
+    r"(?P<qty>\d+(?:\.\d+)?)\s+"
+    r"(?:rs\.?|inr|usd|\$|₹)?\s*(?P<rate>[0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)\s+"
+    r"(?P<gst>\d+(?:\.\d+)?)%\s+"
+    r"(?:rs\.?|inr|usd|\$|₹)?\s*(?P<amount>[0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)\s*$",
+    re.IGNORECASE,
+)
 
 ALIASES = {
     "store name": ("store", "vendor", "company", "shop", "merchant"),
@@ -46,12 +55,52 @@ def _extract_label_value_fields(lines: list[str]) -> dict[str, str]:
     fields: dict[str, str] = {}
 
     for line in lines:
+        store_date = re.match(r"^(?P<store>.+?)\s+Date:\s*(?P<date>.+)$", line, flags=re.IGNORECASE)
+        if store_date:
+            fields.setdefault("Store Name", store_date.group("store").strip())
+            fields.setdefault("Date", store_date.group("date").strip())
+            continue
+
+        address_gst = re.match(r"^(?P<address>.+?)\s+GSTIN:\s*(?P<gst>.+)$", line, flags=re.IGNORECASE)
+        if address_gst:
+            fields.setdefault("Address", address_gst.group("address").strip())
+            fields.setdefault("Gst Number", address_gst.group("gst").strip())
+            continue
+
+        customer_payment = re.match(
+            r"^Customer Name:\s*(?P<customer>.+?)\s+Payment Mode:\s*(?P<payment>.+)$",
+            line,
+            flags=re.IGNORECASE,
+        )
+        if customer_payment:
+            fields.setdefault("Customer", customer_payment.group("customer").strip())
+            fields.setdefault("Payment Method", customer_payment.group("payment").strip())
+            continue
+
+        if "mobile:" in line.lower() and "due date:" in line.lower():
+            phone_part, due_part = re.split(r"\s+Due Date:\s*", line, maxsplit=1, flags=re.IGNORECASE)
+            fields.setdefault("Phone", re.sub(r"^Mobile:\s*", "", phone_part, flags=re.IGNORECASE).strip())
+            fields.setdefault("Due Date", due_part.strip())
+            continue
+
+        address_supply = re.match(
+            r"^Address:\s*(?P<address>.+?)\s+Place of Supply:\s*(?P<supply>.+)$",
+            line,
+            flags=re.IGNORECASE,
+        )
+        if address_supply:
+            fields.setdefault("Address", address_supply.group("address").strip())
+            fields.setdefault("Place Of Supply", address_supply.group("supply").strip())
+            continue
+
         if ":" in line:
             label, value = line.split(":", 1)
             if 2 <= len(label.strip()) <= 35 and value.strip():
                 fields[_normalize_label(label)] = value.strip()
 
     for canonical, labels in ALIASES.items():
+        if canonical in {"tax", "gst amount", "discount", "total"}:
+            continue
         if canonical.title() in fields:
             continue
         for line in lines:
@@ -59,7 +108,7 @@ def _extract_label_value_fields(lines: list[str]) -> dict[str, str]:
             for label in labels:
                 if label in lowered:
                     value = re.sub(label, "", line, flags=re.IGNORECASE).strip(" :-#")
-                    if value:
+                    if value and not value.isupper():
                         fields[canonical.title()] = value
                         break
             if canonical.title() in fields:
@@ -68,6 +117,12 @@ def _extract_label_value_fields(lines: list[str]) -> dict[str, str]:
     date_match = DATE_RE.search("\n".join(lines))
     if date_match and "Date" not in fields:
         fields["Date"] = date_match.group(0)
+
+    phone = fields.get("Phone", "")
+    if "Due Date:" in phone:
+        phone_value, due_value = re.split(r"\s+Due Date:\s*", phone, maxsplit=1, flags=re.IGNORECASE)
+        fields["Phone"] = phone_value.strip()
+        fields.setdefault("Due Date", due_value.strip())
 
     return fields
 
@@ -118,6 +173,17 @@ def _extract_line_rows(lines: list[str]) -> list[dict[str, str]]:
 
 
 def _parse_item_row(line: str) -> dict[str, str] | None:
+    structured_match = ITEM_WITH_GST_RE.match(line)
+    if structured_match:
+        return {
+            "S.No": structured_match.group("serial"),
+            "Item": re.sub(r"\s{2,}", " ", structured_match.group("item").strip(" -:|")),
+            "Qty": _clean_amount(structured_match.group("qty")).rstrip("0").rstrip("."),
+            "Rate": _clean_amount(structured_match.group("rate")),
+            "GST %": _clean_amount(structured_match.group("gst")).rstrip("0").rstrip("."),
+            "Amount": _clean_amount(structured_match.group("amount")),
+        }
+
     tokens = line.replace("|", " ").split()
     if len(tokens) < 2:
         return None
@@ -166,11 +232,16 @@ def _ordered_columns(source: list[dict[str, str]] | dict[str, str]) -> list[str]
         "Customer",
         "Buyer",
         "Phone",
+        "Address",
         "GST Number",
+        "Due Date",
+        "Place Of Supply",
+        "S.No",
         "Item",
         "Description",
         "Qty",
         "Rate",
+        "GST %",
         "Amount",
         "GST Amount",
         "Tax",
@@ -203,7 +274,10 @@ def _bill_context(fields: dict[str, str]) -> dict[str, str]:
         "Customer": fields.get("Customer", ""),
         "Buyer": fields.get("Buyer", ""),
         "Phone": fields.get("Phone", ""),
+        "Address": fields.get("Address", ""),
         "GST Number": fields.get("Gst Number", ""),
+        "Due Date": fields.get("Due Date", ""),
+        "Place Of Supply": fields.get("Place Of Supply", ""),
         "GST Amount": fields.get("Gst Amount", ""),
         "Tax": fields.get("Tax", ""),
         "Discount": fields.get("Discount", ""),
@@ -227,15 +301,41 @@ def _derive_bill_name(first_line: str) -> str:
     return cleaned
 
 
+def _derive_bill_name_from_lines(lines: list[str]) -> str:
+    skip_words = (
+        "tax invoice",
+        "invoice",
+        "receipt",
+        "bill",
+        "bill to",
+        "payment details",
+        "terms",
+        "description",
+        "amount",
+        "address",
+        "date",
+        "gstin",
+    )
+    for line in lines[:8]:
+        lowered = line.lower()
+        if ":" in line or any(word == lowered or word in lowered for word in skip_words):
+            continue
+        if re.search(r"[A-Za-z]", line):
+            candidate = _derive_bill_name(line)
+            if candidate:
+                return candidate
+    return _derive_bill_name(lines[0]) if lines else ""
+
+
 def parse_dynamic_data(text: str, detected_type: str) -> dict:
     lines = [line.strip() for line in text.replace("\r", "\n").splitlines() if line.strip()]
     fields = _extract_label_value_fields(lines)
     _extract_amount_fields(lines, fields)
 
     if lines and "Store Name" not in fields:
-        first_line = _derive_bill_name(lines[0])
-        if first_line:
-            fields["Store Name"] = first_line
+        bill_name = _derive_bill_name_from_lines(lines)
+        if bill_name:
+            fields["Store Name"] = bill_name
 
     rows = _extract_line_rows(lines)
     if rows:
