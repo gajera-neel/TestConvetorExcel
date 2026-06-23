@@ -18,11 +18,10 @@ def preprocess_image(file_path: Path) -> list[Image.Image]:
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     max_side = max(gray.shape)
-    target_side = 1800
+    target_side = 1400
     scale = target_side / max_side if max_side > target_side else min(2.0, max(1.0, target_side / max_side))
     resized = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-    denoised = cv2.fastNlMeansDenoising(resized, h=12)
-    contrast = cv2.convertScaleAbs(denoised, alpha=1.7, beta=5)
+    contrast = cv2.convertScaleAbs(resized, alpha=1.65, beta=5)
     adaptive = cv2.adaptiveThreshold(
         contrast,
         255,
@@ -43,7 +42,7 @@ def extract_image_text(file_path: Path) -> tuple[str, float, list[str]]:
     for image in preprocess_image(file_path):
         for config in configs:
             try:
-                text = pytesseract.image_to_string(image, config=config, timeout=25).strip()
+                text = pytesseract.image_to_string(image, config=config, timeout=15).strip()
             except pytesseract.TesseractNotFoundError:
                 logs.append("Tesseract is not installed on this server; image OCR was skipped")
                 return "", 0.0, logs
@@ -52,9 +51,9 @@ def extract_image_text(file_path: Path) -> tuple[str, float, list[str]]:
                 continue
             if text:
                 candidates.append(text)
-                if len(text.split()) >= 12:
+                if len(text.split()) >= 10:
                     break
-        if candidates and len(max(candidates, key=len).split()) >= 12:
+        if candidates and len(max(candidates, key=len).split()) >= 10:
             break
 
     if not candidates:

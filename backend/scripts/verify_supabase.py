@@ -21,6 +21,9 @@ def main() -> None:
             "confidence": 1.0,
             "fields": {
                 "Bill Name": "Verification Bill",
+                "Invoice Number": "VERIFY-001",
+                "Date": "23/06/2026",
+                "GST Number": "24VERIFY1234Z1",
                 "Total": "123.45",
                 "Tax": "10.00",
             },
@@ -42,6 +45,8 @@ def main() -> None:
         fetched = get_bill(db, sample["id"])
         if not fetched:
             raise RuntimeError("Sample bill was not fetched after insert.")
+        if fetched.get("invoice_number") != "VERIFY-001":
+            raise RuntimeError("Expanded bill columns were not persisted.")
         delete_bill(db, sample["id"])
 
         print("Supabase connected")

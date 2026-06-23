@@ -40,6 +40,10 @@ def _bill_name(fields: dict, filename: str) -> str:
     )
 
 
+def _vendor(fields: dict, filename: str) -> str:
+    return _bill_name(fields, filename)
+
+
 def _amounts(fields: dict, rows: list[dict]) -> tuple[Decimal, Decimal, Decimal]:
     amount = _sum_rows(rows, ("Amount", "Total"))
     tax = _decimal(_field_value(fields, ("Tax", "GST Amount", "Gst Amount", "Gst", "CGST", "SGST", "IGST")))
@@ -59,9 +63,30 @@ def bill_to_record(bill: Bill) -> dict:
         **raw,
         "id": bill.id,
         "bill_name": bill.bill_name,
+        "filename": bill.filename,
+        "file_type": bill.file_type,
+        "detected_type": bill.detected_type,
+        "confidence": float(bill.confidence),
+        "vendor": bill.vendor,
+        "invoice_number": bill.invoice_number,
+        "bill_date": bill.bill_date,
+        "customer": bill.customer,
+        "buyer": bill.buyer,
+        "phone": bill.phone,
+        "gst_number": bill.gst_number,
         "amount": str(bill.amount),
         "tax": str(bill.tax),
+        "gst_amount": str(bill.gst_amount),
+        "discount": str(bill.discount),
         "total": str(bill.total),
+        "payment_method": bill.payment_method,
+        "rows_count": bill.rows_count,
+        "columns": bill.columns_json or raw.get("columns", []),
+        "rows": bill.rows_json or raw.get("rows", []),
+        "fields": bill.fields_json or raw.get("fields", {}),
+        "extracted_text": bill.extracted_text,
+        "preview_url": bill.preview_url,
+        "file_path": bill.file_path,
         "uploaded_at": bill.upload_date.isoformat(timespec="seconds"),
         "status": bill.status,
     }
@@ -71,6 +96,8 @@ def save_bill(db: Session, record: dict) -> Bill:
     fields = record.get("fields") or {}
     rows = record.get("rows") or []
     amount, tax, total = _amounts(fields, rows)
+    gst_amount = _decimal(_field_value(fields, ("GST Amount", "Gst Amount", "Gst", "CGST", "SGST", "IGST")))
+    discount = _decimal(_field_value(fields, ("Discount", "Disc")))
     upload_date = record.get("uploaded_at")
     parsed_upload_date = (
         datetime.fromisoformat(upload_date) if isinstance(upload_date, str) and upload_date else datetime.utcnow()
@@ -79,9 +106,30 @@ def save_bill(db: Session, record: dict) -> Bill:
     bill = Bill(
         id=record["id"],
         bill_name=_bill_name(fields, record.get("filename", "")),
+        filename=record.get("filename", ""),
+        file_type=record.get("file_type", ""),
+        detected_type=record.get("detected_type", ""),
+        confidence=_decimal(record.get("confidence", 0)),
+        vendor=_vendor(fields, record.get("filename", "")),
+        invoice_number=_field_value(fields, ("Invoice Number", "Bill Number", "Receipt Number")),
+        bill_date=_field_value(fields, ("Date", "Invoice Date", "Bill Date")),
+        customer=_field_value(fields, ("Customer", "Customer Name")),
+        buyer=_field_value(fields, ("Buyer", "Billed To", "Bill To")),
+        phone=_field_value(fields, ("Phone", "Mobile", "Contact")),
+        gst_number=_field_value(fields, ("GST Number", "Gst Number", "GSTIN", "Gstin")),
         amount=amount,
         tax=tax,
+        gst_amount=gst_amount,
+        discount=discount,
         total=total,
+        payment_method=_field_value(fields, ("Payment Method", "Paid By", "Mode")),
+        rows_count=len(rows),
+        columns_json=record.get("columns") or [],
+        rows_json=rows,
+        fields_json=fields,
+        extracted_text=record.get("extracted_text", ""),
+        preview_url=record.get("preview_url", ""),
+        file_path=record.get("file_path", ""),
         upload_date=parsed_upload_date,
         raw_json=record,
         status=record.get("status", "processed"),

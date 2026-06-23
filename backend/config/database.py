@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
@@ -33,3 +33,33 @@ def init_db() -> None:
     from models.bill import Bill  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    ensure_bill_schema()
+
+
+def ensure_bill_schema() -> None:
+    statements = [
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS filename VARCHAR(255) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS file_type VARCHAR(50) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS detected_type VARCHAR(80) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS confidence NUMERIC(5, 2) NOT NULL DEFAULT 0",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS vendor VARCHAR(255) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS invoice_number VARCHAR(120) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS bill_date VARCHAR(80) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS customer VARCHAR(255) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS buyer VARCHAR(255) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS phone VARCHAR(80) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS gst_number VARCHAR(120) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS gst_amount NUMERIC(12, 2) NOT NULL DEFAULT 0",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS discount NUMERIC(12, 2) NOT NULL DEFAULT 0",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS payment_method VARCHAR(120) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS rows_count INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS columns_json JSONB NOT NULL DEFAULT '[]'::jsonb",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS rows_json JSONB NOT NULL DEFAULT '[]'::jsonb",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS fields_json JSONB NOT NULL DEFAULT '{}'::jsonb",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS extracted_text TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS preview_url VARCHAR(500) NOT NULL DEFAULT ''",
+        "ALTER TABLE bills ADD COLUMN IF NOT EXISTS file_path VARCHAR(500) NOT NULL DEFAULT ''",
+    ]
+    with engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))

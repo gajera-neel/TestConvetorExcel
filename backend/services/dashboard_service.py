@@ -31,6 +31,8 @@ def _format_money(value: Decimal) -> str:
 
 
 def _vendor_from_record(record: dict) -> str:
+    if record.get("vendor"):
+        return record["vendor"]
     fields = record.get("fields", {})
     return fields.get("Store Name") or fields.get("Vendor") or fields.get("Seller") or fields.get("Company") or "Unknown Vendor"
 
