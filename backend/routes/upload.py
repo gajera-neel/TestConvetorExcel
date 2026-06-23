@@ -1,6 +1,7 @@
 from pathlib import Path
 from uuid import uuid4
 from datetime import datetime
+from time import perf_counter
 
 import pytesseract
 from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
@@ -41,6 +42,7 @@ def _build_upload_response(session: dict, db: Session) -> dict:
 
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    started_at = perf_counter()
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
@@ -54,10 +56,15 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
     upload_id = uuid4().hex
     safe_name = f"{upload_id}{extension}"
     file_path = UPLOAD_DIR / safe_name
-    file_path.write_bytes(await file.read())
+    content = await file.read()
+    file_path.write_bytes(content)
+    file_size_mb = len(content) / (1024 * 1024)
 
     try:
+        extraction_started_at = perf_counter()
         document = extract_document(file_path, extension)
+        document["logs"].append(f"Extraction completed in {perf_counter() - extraction_started_at:.2f}s")
+        document["logs"].append(f"Uploaded file size: {file_size_mb:.2f} MB")
     except pytesseract.TesseractNotFoundError as exc:
         raise HTTPException(
             status_code=500,
@@ -70,6 +77,7 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
         ) from exc
 
     parsed = parse_dynamic_data(document["extracted_text"], document["detected_type"])
+    document["logs"].append(f"Generated {len(parsed['rows'])} row(s) and {len(parsed['columns'])} column(s)")
     if not document["extracted_text"].strip():
         document["logs"].append(
             "No readable text was extracted. Check image quality, crop/rotation, or server OCR installation."
@@ -92,6 +100,7 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
     }
     session = save_session(session_payload)
     bill = save_bill(db, session_payload)
+    session["logs"].append(f"Saved to Supabase in {perf_counter() - started_at:.2f}s total")
     session["history_record"] = bill_to_record(bill)
 
     return _build_upload_response(session, db)

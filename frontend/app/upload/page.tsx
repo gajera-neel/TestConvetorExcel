@@ -20,6 +20,7 @@ export default function UploadPage() {
   const [previewMime, setPreviewMime] = useState("");
   const [previewZoom, setPreviewZoom] = useState(1);
   const [recent, setRecent] = useState<string[]>([]);
+  const [processingNote, setProcessingNote] = useState("");
 
   const confidence = useMemo(() => Math.round((result?.confidence || 0) * 100), [result]);
   const previewIsImage = previewMime.startsWith("image/");
@@ -71,6 +72,42 @@ export default function UploadPage() {
     warmBackend();
   }, []);
 
+  async function compressImageForUpload(file: File): Promise<File> {
+    if (!file.type.startsWith("image/") || file.size < 1_200_000) {
+      return file;
+    }
+
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const element = new Image();
+        element.onload = () => resolve(element);
+        element.onerror = reject;
+        element.src = imageUrl;
+      });
+
+      const maxSide = 1600;
+      const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+
+      const context = canvas.getContext("2d");
+      if (!context) return file;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
+      if (!blob || blob.size >= file.size) return file;
+
+      return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+        type: "image/jpeg",
+        lastModified: Date.now(),
+      });
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+    }
+  }
+
   async function handleFile(file?: File) {
     if (!file) return;
     setPreviewUrl(URL.createObjectURL(file));
@@ -78,13 +115,23 @@ export default function UploadPage() {
     setPreviewZoom(1);
     setLoading(true);
     setProgress(8);
+    setProcessingNote("Preparing document for fast extraction...");
     const progressTimer = window.setInterval(() => {
       setProgress((value) => (value < 82 ? value + 3 : value));
     }, 900);
 
     try {
-      const data = await uploadFile(file, setProgress);
-      logExtractionDebug(file, data);
+      const uploadCandidate = await compressImageForUpload(file);
+      if (uploadCandidate.size < file.size) {
+        const savedPercent = Math.round((1 - uploadCandidate.size / file.size) * 100);
+        setProcessingNote(`Compressed image by ${savedPercent}% for faster OCR. Uploading now...`);
+      } else {
+        setProcessingNote("Uploading and analyzing document...");
+      }
+
+      const data = await uploadFile(uploadCandidate, setProgress);
+      setProcessingNote("Analysis complete. Review raw data and export Excel.");
+      logExtractionDebug(uploadCandidate, data);
       const nextRows = rowsFromExtraction(data);
       setResult(data);
       setColumns(data.extracted_fields.columns);
@@ -94,6 +141,7 @@ export default function UploadPage() {
       console.error("[DocExcel] Upload failed", { fileName: file.name, error });
       alert(error instanceof Error ? error.message : "Upload failed");
       setProgress(0);
+      setProcessingNote("");
     } finally {
       window.clearInterval(progressTimer);
       setLoading(false);
@@ -187,7 +235,7 @@ export default function UploadPage() {
               <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-3xl text-white shadow-sm">
                 ⇪
               </div>
-              <h3 className="text-2xl font-bold text-slate-950 sm:text-3xl">Drop JPG, PNG, PDF, or scan here</h3>
+              <h3 className="text-2xl font-bold text-slate-950 sm:text-3xl">Drop JPG, PNG, PDF, TXT, or scan here</h3>
               <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 sm:text-base">After upload, extracted data will appear below as an editable raw table.</p>
               <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap sm:justify-center">
                 <button onClick={() => inputRef.current?.click()} className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white shadow-sm hover:bg-blue-700">
@@ -197,14 +245,18 @@ export default function UploadPage() {
                   Camera Scan
                 </button>
               </div>
-              <input ref={inputRef} hidden type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(event) => handleFile(event.target.files?.[0])} />
+              <input ref={inputRef} hidden type="file" accept=".jpg,.jpeg,.png,.pdf,.txt" onChange={(event) => handleFile(event.target.files?.[0])} />
             </div>
           </div>
 
           <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100">
             <motion.div animate={{ width: `${progress}%` }} className="h-full rounded-full bg-blue-600" />
           </div>
-          {loading ? <p className="mt-3 text-sm text-blue-600">Analyzing file, extracting data, and generating dynamic columns...</p> : null}
+          {loading || processingNote ? (
+            <p className="mt-3 text-sm text-blue-600">
+              {processingNote || "Analyzing file, extracting data, and generating dynamic columns..."}
+            </p>
+          ) : null}
         </section>
 
         {(previewUrl || result) && (
