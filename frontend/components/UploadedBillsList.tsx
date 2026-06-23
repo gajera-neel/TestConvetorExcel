@@ -22,12 +22,12 @@ export function UploadedBillsList({
 }) {
   return (
     <section className="glass-card rounded-2xl p-4 sm:p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-bold text-slate-950">Uploaded Bills</h3>
           <p className="text-sm text-slate-500">Click any bill to view document-level analytics.</p>
         </div>
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{bills.length} files</span>
+        <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{bills.length} files</span>
       </div>
 
       {bills.length ? (
@@ -56,7 +56,7 @@ export function UploadedBillsList({
                   <span className="rounded-full bg-emerald-50 px-3 py-1 text-center text-xs font-semibold text-emerald-700">
                     {bill.status || "processed"}
                   </span>
-                  <div className="flex gap-2 lg:justify-end">
+                  <div className="grid grid-cols-2 gap-2 sm:flex lg:justify-end">
                     <button
                       type="button"
                       onClick={() => onSelect(bill.id)}

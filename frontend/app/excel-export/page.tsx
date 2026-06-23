@@ -46,7 +46,7 @@ export default function ExcelExportPage() {
             <h2 className="text-xl font-semibold text-slate-950">Excel Export</h2>
             <p className="text-sm text-slate-500">Generate formatted workbook from edited raw data.</p>
           </div>
-          <button onClick={download} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700">
+          <button onClick={download} className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 sm:w-auto">
             Download Excel
           </button>
         </header>
@@ -66,7 +66,7 @@ export default function ExcelExportPage() {
           </GlassPanel>
         </section>
 
-        <GlassPanel>
+        <GlassPanel className="min-w-0 overflow-hidden">
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
             <h3 className="text-xl font-bold">Export Preview</h3>

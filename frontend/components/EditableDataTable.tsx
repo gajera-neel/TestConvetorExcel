@@ -16,6 +16,7 @@ type IndexedRow = {
 const PAGE_SIZE = 1000;
 const ROW_HEIGHT = 58;
 const OVERSCAN_ROWS = 8;
+const COLUMN_WIDTH = 220;
 
 export function EditableDataTable({ columns, rows, onChange }: Props) {
   const [query, setQuery] = useState("");
@@ -43,7 +44,7 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
   const visibleRows = pageRows.slice(virtualStart, virtualEnd);
   const topSpacerHeight = virtualStart * ROW_HEIGHT;
   const bottomSpacerHeight = Math.max(0, (pageRows.length - virtualEnd) * ROW_HEIGHT);
-  const tableWidth = safeColumns.length * 240 + 120;
+  const tableWidth = safeColumns.length * COLUMN_WIDTH + 112;
 
   function updateCell(visibleIndex: number, column: string, value: string) {
     const originalIndex = visibleRows[visibleIndex]?.originalIndex;
@@ -119,7 +120,7 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
   }, []);
 
   return (
-    <div className="flex h-[calc(100vh-220px)] min-h-[520px] min-w-0 flex-col overflow-hidden">
+    <div className="flex h-[70vh] min-h-[420px] min-w-0 flex-col overflow-hidden lg:h-[calc(100vh-220px)] lg:min-h-[520px]">
       <div className="sticky top-0 z-20 mb-4 flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0 flex-1">
@@ -134,7 +135,7 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none ring-blue-100 transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:items-center">
             <button onClick={addColumn} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Add Column
             </button>
@@ -162,7 +163,7 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
           <thead className="sticky top-0 z-30 bg-slate-50 shadow-sm">
             <tr>
               {safeColumns.map((column) => (
-                <th key={column} className="w-[240px] min-w-[240px] whitespace-nowrap border-b border-slate-200 p-3 text-left">
+                <th key={column} className="w-[220px] min-w-[220px] whitespace-nowrap border-b border-slate-200 p-3 text-left">
                   <div className="flex w-full items-center gap-2">
                     <input
                       defaultValue={column}
@@ -200,7 +201,7 @@ export function EditableDataTable({ columns, rows, onChange }: Props) {
             {visibleRows.map(({ row, originalIndex }, rowIndex) => (
               <tr key={`${page}-${originalIndex}`} className="h-[58px] odd:bg-slate-50/60 hover:bg-blue-50/50">
                 {safeColumns.map((column) => (
-                  <td key={column} className="w-[240px] min-w-[240px] whitespace-nowrap border-b border-slate-100 p-2">
+                <td key={column} className="w-[220px] min-w-[220px] whitespace-nowrap border-b border-slate-100 p-2">
                     <input
                       value={row[column] || ""}
                       onChange={(event) => updateCell(rowIndex, column, event.target.value)}

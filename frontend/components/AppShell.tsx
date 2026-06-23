@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <motion.header
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm lg:hidden"
+          className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white/95 px-3 py-3 shadow-sm backdrop-blur lg:hidden"
         >
           <Link href="/upload" className="flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white">
@@ -30,22 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <small className="text-slate-500">AI Converter</small>
             </span>
           </Link>
-          <nav className="flex rounded-xl bg-slate-100 p-1">
-            {nav.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                    active ? "bg-blue-600 text-white" : "text-slate-600"
-                  }`}
-                >
-                  {item.short}
-                </Link>
-              );
-            })}
-          </nav>
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">Business App</span>
         </motion.header>
 
         <div className="grid lg:grid-cols-[220px_1fr]">
@@ -107,9 +92,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </motion.aside>
 
-          <main className="min-w-0 bg-white p-4 pb-6 sm:p-5 lg:min-h-screen lg:p-6">{children}</main>
+          <main className="min-w-0 bg-white p-3 pb-24 sm:p-5 sm:pb-24 lg:min-h-screen lg:p-6">{children}</main>
         </div>
       </div>
+
+      <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-3 rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-2xl shadow-slate-900/15 backdrop-blur lg:hidden">
+        {nav.map((item) => {
+          const active = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center rounded-xl px-2 py-2 text-[11px] font-semibold transition ${
+                active ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"
+              }`}
+            >
+              <span className="text-sm leading-none">{item.index}</span>
+              <span className="mt-1">{item.short}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

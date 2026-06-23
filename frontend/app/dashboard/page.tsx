@@ -69,7 +69,7 @@ function DashboardContent() {
 
   return (
     <AppShell>
-      <div className="max-h-[calc(100vh-2rem)] space-y-4 overflow-y-auto pr-1 sm:space-y-5">
+      <div className="space-y-4 pr-0 sm:space-y-5 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pr-1">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-slate-950">
@@ -82,7 +82,7 @@ function DashboardContent() {
           <button
             onClick={loadDashboard}
             disabled={loading}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60 sm:w-auto"
           >
             Refresh
           </button>

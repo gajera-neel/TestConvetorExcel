@@ -174,12 +174,12 @@ export default function UploadPage() {
             <h2 className="text-xl font-semibold text-slate-950">Upload</h2>
             <p className="text-sm text-slate-500">Upload bills, invoices, receipts, images, or PDFs.</p>
           </div>
-          <button onClick={() => inputRef.current?.click()} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+          <button onClick={() => inputRef.current?.click()} className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto">
             + Upload Document
           </button>
         </div>
 
-        <section className="grid gap-3 md:grid-cols-3">
+        <section className="grid gap-3 min-[420px]:grid-cols-3">
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase text-slate-500">Uploaded Files</p>
             <strong className="mt-2 block text-2xl text-slate-950">{recent.length}</strong>
@@ -195,13 +195,13 @@ export default function UploadPage() {
         </section>
 
         <section className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input disabled placeholder="Search file name" className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400" />
-            <select disabled className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input disabled placeholder="Search file name" className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm placeholder:text-slate-400" />
+            <select disabled className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
               <option>All file types</option>
             </select>
           </div>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex">
             <button className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Report</button>
             <button onClick={() => inputRef.current?.click()} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white">Upload</button>
           </div>
@@ -229,15 +229,15 @@ export default function UploadPage() {
               setDragging(false);
               handleFile(event.dataTransfer.files[0]);
             }}
-            className={`relative mx-auto grid min-h-[300px] max-w-xl place-items-center overflow-hidden rounded-xl border border-dashed p-5 text-center transition sm:min-h-[340px] sm:p-8 ${
+            className={`relative mx-auto grid min-h-[260px] max-w-xl place-items-center overflow-hidden rounded-xl border border-dashed p-4 text-center transition sm:min-h-[340px] sm:p-8 ${
               dragging ? "border-blue-500 bg-blue-50" : "border-slate-300 bg-slate-50"
             }`}
           >
             <div className="relative">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-3xl text-white shadow-sm">
+              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-2xl text-white shadow-sm sm:h-16 sm:w-16 sm:text-3xl">
                 ⇪
               </div>
-              <h3 className="text-2xl font-bold text-slate-950 sm:text-3xl">Drop JPG, PNG, PDF, TXT, or scan here</h3>
+              <h3 className="text-xl font-bold text-slate-950 sm:text-3xl">Drop JPG, PNG, PDF, TXT, or scan here</h3>
               <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 sm:text-base">After upload, extracted data will appear below as an editable raw table.</p>
               <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap sm:justify-center">
                 <button onClick={() => inputRef.current?.click()} className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white shadow-sm hover:bg-blue-700">
@@ -293,7 +293,7 @@ export default function UploadPage() {
                 ) : null}
               </div>
               {previewUrl ? (
-                <div className="h-[360px] overflow-auto rounded-3xl border border-white/10 bg-white [scrollbar-color:#94a3b8_#f1f5f9] [scrollbar-width:thin] sm:h-[520px] [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-track]:bg-slate-100">
+                <div className="h-[320px] overflow-auto rounded-2xl border border-white/10 bg-white [scrollbar-color:#94a3b8_#f1f5f9] [scrollbar-width:thin] sm:h-[520px] sm:rounded-3xl [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-track]:bg-slate-100">
                   <div
                     style={{
                       width: `${previewZoom * 100}%`,
@@ -310,7 +310,7 @@ export default function UploadPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid h-[360px] place-items-center rounded-3xl bg-white/5 text-slate-400 sm:h-[520px]">No preview</div>
+                <div className="grid h-[320px] place-items-center rounded-2xl bg-white/5 text-slate-400 sm:h-[520px] sm:rounded-3xl">No preview</div>
               )}
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <div className="rounded-xl bg-slate-50 p-4">
@@ -330,7 +330,7 @@ export default function UploadPage() {
                   <h3 className="text-xl font-bold">Extraction Review</h3>
                   <p className="text-sm text-slate-500">Edit, delete, add fields, rename columns, then export.</p>
                 </div>
-                <button disabled={!rows.length} onClick={downloadEditedExcel} className="rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-40">
+                <button disabled={!rows.length} onClick={downloadEditedExcel} className="w-full rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-40 md:w-auto">
                   Generate Excel
                 </button>
               </div>
