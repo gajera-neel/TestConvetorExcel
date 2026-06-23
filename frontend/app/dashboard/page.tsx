@@ -39,6 +39,26 @@ function DashboardContent() {
     return () => clearInterval(timer);
   }, [loadDashboard]);
 
+  useEffect(() => {
+    if (!dashboard?.calculation_issues?.length) return;
+    dashboard.calculation_issues.forEach((issue) => {
+      console.groupCollapsed(`[DocExcel] Calculation review needed: ${issue.filename || issue.id || "Bill"}`);
+      console.warn("Issues", issue.audit.issues);
+      console.info("Sources", issue.audit.sources);
+      console.info("Totals", {
+        subtotal: issue.audit.subtotal,
+        tax: issue.audit.tax,
+        discount: issue.audit.discount,
+        total: issue.audit.total,
+        expectedTotal: issue.audit.expected_total,
+        difference: issue.audit.difference,
+      });
+      console.info("Raw fields", issue.audit.raw_fields);
+      console.info("Raw rows", issue.audit.raw_rows);
+      console.groupEnd();
+    });
+  }, [dashboard]);
+
   function selectBill(billId: string) {
     router.push(`/dashboard?bill=${encodeURIComponent(billId)}`);
   }

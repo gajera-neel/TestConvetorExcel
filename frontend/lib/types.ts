@@ -47,6 +47,7 @@ export type DashboardData = {
   uploaded_bills?: UploadedBill[];
   bill?: BillDashboardDetail;
   summary?: SummaryItem[];
+  calculation_issues?: CalculationIssue[];
 };
 
 export type ChartPoint = {
@@ -81,6 +82,8 @@ export type UploadedBill = {
   status: string;
   confidence?: number;
   rows_count?: number;
+  calculation_status?: "balanced" | "needs_review";
+  calculation_issues?: string[];
 };
 
 export type BillDashboardDetail = UploadedBill & {
@@ -94,10 +97,31 @@ export type BillDashboardDetail = UploadedBill & {
   customer?: string;
   tax?: string;
   total?: string;
+  calculation?: CalculationAudit;
   raw_json?: Record<string, unknown>;
 };
 
 export type SummaryItem = {
   label: string;
   value: string | number;
+};
+
+export type CalculationAudit = {
+  subtotal: string;
+  tax: string;
+  discount: string;
+  total: string;
+  expected_total: string;
+  difference: string;
+  is_balanced: boolean;
+  issues: string[];
+  sources: Record<string, string>;
+  raw_fields: Record<string, string>;
+  raw_rows: Record<string, string>[];
+};
+
+export type CalculationIssue = {
+  id?: string;
+  filename?: string;
+  audit: CalculationAudit;
 };

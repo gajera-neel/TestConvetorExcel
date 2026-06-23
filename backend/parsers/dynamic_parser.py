@@ -13,6 +13,16 @@ ITEM_WITH_GST_RE = re.compile(
     r"(?:rs\.?|inr|usd|\$|₹)?\s*(?P<amount>[0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)\s*$",
     re.IGNORECASE,
 )
+ITEM_WITH_GST_TAX_RE = re.compile(
+    r"^\s*(?P<serial>\d+)\s+"
+    r"(?P<item>.+?)\s+"
+    r"(?P<qty>\d+(?:\.\d+)?)\s+"
+    r"(?:rs\.?|inr|usd|\$|₹)?\s*(?P<rate>[0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)\s+"
+    r"(?P<gst>\d+(?:\.\d+)?)%\s+"
+    r"(?:rs\.?|inr|usd|\$|₹)?\s*(?P<gst_amount>[0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)\s+"
+    r"(?:rs\.?|inr|usd|\$|₹)?\s*(?P<amount>[0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)\s*$",
+    re.IGNORECASE,
+)
 
 ALIASES = {
     "store name": ("store", "vendor", "company", "shop", "merchant"),
@@ -83,6 +93,12 @@ def _extract_label_value_fields(lines: list[str]) -> dict[str, str]:
             fields.setdefault("Due Date", due_part.strip())
             continue
 
+        if "mobile:" in line.lower() and "transaction id:" in line.lower():
+            phone_part, transaction_part = re.split(r"\s+Transaction ID:\s*", line, maxsplit=1, flags=re.IGNORECASE)
+            fields.setdefault("Phone", re.sub(r"^Mobile:\s*", "", phone_part, flags=re.IGNORECASE).strip())
+            fields.setdefault("Transaction ID", transaction_part.strip())
+            continue
+
         address_supply = re.match(
             r"^Address:\s*(?P<address>.+?)\s+Place of Supply:\s*(?P<supply>.+)$",
             line,
@@ -128,6 +144,10 @@ def _extract_label_value_fields(lines: list[str]) -> dict[str, str]:
 
 
 def _extract_amount_fields(lines: list[str], fields: dict[str, str]) -> None:
+    cgst = Decimal("0")
+    sgst = Decimal("0")
+    igst = Decimal("0")
+
     for line in lines:
         lowered = line.lower()
         amounts = MONEY_RE.findall(line)
@@ -135,11 +155,34 @@ def _extract_amount_fields(lines: list[str], fields: dict[str, str]) -> None:
             continue
 
         amount = _clean_amount(amounts[-1])
-        for canonical, labels in ALIASES.items():
-            if canonical not in {"tax", "discount", "total", "gst amount"}:
-                continue
-            if any(label in lowered for label in labels):
-                fields[canonical.title()] = amount
+        if "grand total" in lowered or "net total" in lowered or "amount due" in lowered:
+            fields["Total"] = amount
+            continue
+        if "total gst" in lowered or "gst total" in lowered or "gst amount" in lowered:
+            fields["Gst Amount"] = amount
+            fields["Tax"] = amount
+            continue
+        if re.match(r"^gst\b", lowered) and "summary" not in lowered:
+            fields["Gst Amount"] = amount
+            fields["Tax"] = amount
+            continue
+        if "taxable amount" in lowered or "subtotal" in lowered or "sub total" in lowered:
+            fields["Taxable Amount"] = amount
+            continue
+        if "round discount" in lowered or "discount" in lowered or "disc" in lowered:
+            fields["Discount"] = amount
+            continue
+        if "cgst" in lowered:
+            cgst += Decimal(_clean_amount(amount))
+            continue
+        if "sgst" in lowered:
+            sgst += Decimal(_clean_amount(amount))
+            continue
+        if "igst" in lowered:
+            igst += Decimal(_clean_amount(amount))
+            continue
+        if re.search(r"\btax\b", lowered) and "tax invoice" not in lowered:
+            fields.setdefault("Tax", amount)
 
     if "Total" not in fields:
         parsed_amounts = []
@@ -153,6 +196,11 @@ def _extract_amount_fields(lines: list[str], fields: dict[str, str]) -> None:
                     continue
         if parsed_amounts:
             fields["Total"] = str(max(parsed_amounts).quantize(Decimal("0.01")))
+
+    split_gst = cgst + sgst + igst
+    if split_gst and "Gst Amount" not in fields:
+        fields["Gst Amount"] = str(split_gst.quantize(Decimal("0.01")))
+        fields["Tax"] = fields["Gst Amount"]
 
 
 def _extract_line_rows(lines: list[str]) -> list[dict[str, str]]:
@@ -173,6 +221,18 @@ def _extract_line_rows(lines: list[str]) -> list[dict[str, str]]:
 
 
 def _parse_item_row(line: str) -> dict[str, str] | None:
+    structured_tax_match = ITEM_WITH_GST_TAX_RE.match(line)
+    if structured_tax_match:
+        return {
+            "S.No": structured_tax_match.group("serial"),
+            "Item": re.sub(r"\s{2,}", " ", structured_tax_match.group("item").strip(" -:|")),
+            "Qty": _clean_amount(structured_tax_match.group("qty")).rstrip("0").rstrip("."),
+            "Rate": _clean_amount(structured_tax_match.group("rate")),
+            "GST %": _clean_amount(structured_tax_match.group("gst")).rstrip("0").rstrip("."),
+            "GST Amount": _clean_amount(structured_tax_match.group("gst_amount")),
+            "Amount": _clean_amount(structured_tax_match.group("amount")),
+        }
+
     structured_match = ITEM_WITH_GST_RE.match(line)
     if structured_match:
         return {
@@ -193,6 +253,8 @@ def _parse_item_row(line: str) -> dict[str, str] | None:
         numeric_tail.insert(0, tokens.pop())
 
     if not numeric_tail or not tokens:
+        return None
+    if len(numeric_tail) == 1 and not re.search(r"(?:rs\.?|inr|usd|\$|₹)", line, flags=re.IGNORECASE):
         return None
 
     if len(numeric_tail) > 3:
@@ -236,6 +298,7 @@ def _ordered_columns(source: list[dict[str, str]] | dict[str, str]) -> list[str]
         "GST Number",
         "Due Date",
         "Place Of Supply",
+        "Transaction ID",
         "S.No",
         "Item",
         "Description",
@@ -243,6 +306,7 @@ def _ordered_columns(source: list[dict[str, str]] | dict[str, str]) -> list[str]
         "Rate",
         "GST %",
         "Amount",
+        "Taxable Amount",
         "GST Amount",
         "Tax",
         "Discount",
@@ -278,6 +342,8 @@ def _bill_context(fields: dict[str, str]) -> dict[str, str]:
         "GST Number": fields.get("Gst Number", ""),
         "Due Date": fields.get("Due Date", ""),
         "Place Of Supply": fields.get("Place Of Supply", ""),
+        "Transaction ID": fields.get("Transaction ID", ""),
+        "Taxable Amount": fields.get("Taxable Amount", ""),
         "GST Amount": fields.get("Gst Amount", ""),
         "Tax": fields.get("Tax", ""),
         "Discount": fields.get("Discount", ""),

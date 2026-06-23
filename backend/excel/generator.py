@@ -22,6 +22,8 @@ SUMMARY_COLUMNS = {
     "Mobile",
     "Address",
     "GST Number",
+    "Transaction ID",
+    "Taxable Amount",
     "GST Amount",
     "Tax",
     "Discount",

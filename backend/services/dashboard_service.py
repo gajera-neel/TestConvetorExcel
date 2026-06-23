@@ -4,30 +4,55 @@ from decimal import Decimal, InvalidOperation
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from services.bill_service import delete_bill, get_bill, list_bills
+from parsers.dynamic_parser import parse_dynamic_data
+from services.bill_service import _amounts, calculate_bill_totals, delete_bill, get_bill, list_bills
+
+
+def _corrected_fields_and_rows(record: dict) -> tuple[dict, list[dict]]:
+    text = str(record.get("extracted_text") or "").strip()
+    if text:
+        try:
+            parsed = parse_dynamic_data(text, record.get("detected_type") or "Bill")
+            fields = parsed.get("fields") or {}
+            rows = parsed.get("rows") or []
+            if fields or rows:
+                return fields, rows
+        except Exception:
+            pass
+    return record.get("fields", {}) or {}, record.get("rows") or []
 
 
 def _amount_from_record(record: dict) -> Decimal:
-    fields = record.get("fields", {})
-    rows = record.get("rows") or []
-    value = fields.get("Total") or fields.get("Amount") or fields.get("Grand Total")
-    if not value and rows:
-        row_amounts = [_decimal_from_value(row.get("Amount") or row.get("Total") or "0") for row in rows]
-        return sum(row_amounts, Decimal("0"))
-    value = value or "0"
+    fields, rows = _corrected_fields_and_rows(record)
+    _, _, total = _amounts(fields, rows)
+    if total:
+        return total
+    value = fields.get("Total") or fields.get("Grand Total") or fields.get("Amount") or "0"
     return _decimal_from_value(value)
 
 
 def _tax_from_record(record: dict) -> Decimal:
-    fields = record.get("fields", {})
-    return _decimal_from_value(
-        record.get("tax")
-        or record.get("gst_amount")
-        or fields.get("Tax")
-        or fields.get("GST Amount")
-        or fields.get("Gst Amount")
-        or "0"
-    )
+    fields, rows = _corrected_fields_and_rows(record)
+    _, tax, _ = _amounts(fields, rows)
+    return tax
+
+
+def _calculation_audit(record: dict) -> dict:
+    fields, rows = _corrected_fields_and_rows(record)
+    totals = calculate_bill_totals(fields, rows)
+    return {
+        "subtotal": _format_money(totals["subtotal"]),
+        "tax": _format_money(totals["tax"]),
+        "discount": _format_money(totals["discount"]),
+        "total": _format_money(totals["total"]),
+        "expected_total": _format_money(totals["expected_total"]),
+        "difference": _format_money(totals["difference"]),
+        "is_balanced": totals["is_balanced"],
+        "issues": totals["issues"],
+        "sources": totals["sources"],
+        "raw_fields": fields,
+        "raw_rows": rows,
+    }
 
 
 def _decimal_from_value(value: object) -> Decimal:
@@ -60,6 +85,7 @@ def _recent_upload(record: dict) -> dict:
 
 
 def _uploaded_bill(record: dict) -> dict:
+    audit = _calculation_audit(record)
     return {
         "id": record.get("id", ""),
         "filename": record.get("filename", "Untitled document"),
@@ -72,6 +98,8 @@ def _uploaded_bill(record: dict) -> dict:
         "status": record.get("status", "processed"),
         "confidence": record.get("confidence", 0),
         "rows_count": len(record.get("rows") or []),
+        "calculation_status": "balanced" if audit["is_balanced"] else "needs_review",
+        "calculation_issues": audit["issues"],
     }
 
 
@@ -185,6 +213,16 @@ def get_global_dashboard(db: Session) -> dict:
         "top_vendors": [{"label": item["vendor"], "value": float(item["amount"])} for item in top_vendors],
         "recent_uploads": [_recent_upload(record) for record in history[:8]],
         "uploaded_bills": [_uploaded_bill(record) for record in history],
+        "calculation_issues": [
+            {
+                "id": record.get("id"),
+                "filename": record.get("filename"),
+                "audit": audit,
+            }
+            for record in history
+            for audit in [_calculation_audit(record)]
+            if not audit["is_balanced"]
+        ],
     }
 
 
@@ -198,6 +236,7 @@ def get_bill_dashboard(db: Session, bill_id: str) -> dict | None:
     columns = record.get("columns") or []
     amount = _amount_from_record(record)
     tax = _tax_from_record(record)
+    audit = _calculation_audit(record)
     confidence = float(record.get("confidence") or 0)
 
     amount_breakdown = [
@@ -239,6 +278,7 @@ def get_bill_dashboard(db: Session, bill_id: str) -> dict | None:
             "customer": record.get("customer", ""),
             "tax": _format_money(tax),
             "total": _format_money(amount),
+            "calculation": audit,
             "raw_json": record,
         },
         "summary": [
@@ -247,6 +287,7 @@ def get_bill_dashboard(db: Session, bill_id: str) -> dict | None:
             {"label": "File Type", "value": record.get("file_type", "")},
             {"label": "Status", "value": record.get("status", "processed")},
             {"label": "Confidence", "value": f"{int(round(confidence * 100))}%"},
+            {"label": "Calculation Status", "value": "Balanced" if audit["is_balanced"] else "Needs Review"},
         ],
         "amount_trend": [{"label": record.get("bill_name") or record.get("filename", "Bill"), "value": float(amount)}],
         "bill_categories": [{"label": record.get("detected_type") or "document", "value": 1}],
@@ -255,6 +296,7 @@ def get_bill_dashboard(db: Session, bill_id: str) -> dict | None:
         "data_volume": row_summary,
         "top_vendors": [{"label": _vendor_from_record(record), "value": float(amount)}],
         "amount_breakdown": amount_breakdown,
+        "calculation_issues": [] if audit["is_balanced"] else [{"id": bill_id, "filename": record.get("filename"), "audit": audit}],
         "recent_uploads": [_recent_upload(record)],
         "uploaded_bills": [_uploaded_bill(item) for item in list_bills(db)],
     }
