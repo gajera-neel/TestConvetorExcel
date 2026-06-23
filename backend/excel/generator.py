@@ -135,13 +135,13 @@ def _style_sheet(sheet, header_fill: PatternFill) -> None:
 def generate_excel_file(rows: list[dict], columns: list[str] | None = None, filename_prefix: str = "export") -> Path:
     safe_rows = rows or [{}]
     safe_columns = _safe_columns(columns or [], safe_rows)
-    summary_values, raw_columns = _split_summary_and_raw(safe_rows, safe_columns)
+    summary_values, detail_columns = _split_summary_and_raw(safe_rows, safe_columns)
     frame = pd.DataFrame(safe_rows)
 
-    for column in raw_columns:
+    for column in safe_columns:
         if column not in frame.columns:
             frame[column] = ""
-    frame = frame[raw_columns]
+    frame = frame[safe_columns]
 
     filename = f"{filename_prefix}_{datetime.now().strftime('%Y%m%d')}.xlsx"
     output_path = EXPORT_DIR / filename
@@ -155,7 +155,7 @@ def generate_excel_file(rows: list[dict], columns: list[str] | None = None, file
 
         summary = workbook.create_sheet("Bill Summary")
         summary.append(["Field", "Value"])
-        for key, value in _build_bill_summary(safe_rows, summary_values, raw_columns):
+        for key, value in _build_bill_summary(safe_rows, summary_values, detail_columns):
             summary.append([key, value])
         _style_sheet(summary, header_fill)
 

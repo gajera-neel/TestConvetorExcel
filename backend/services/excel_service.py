@@ -4,7 +4,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from sqlalchemy.orm import Session
 
-from excel.generator import SUMMARY_COLUMNS, generate_excel_file
+from excel.generator import generate_excel_file
 from services.bill_service import list_bills
 from services.dashboard_service import build_dashboard
 
@@ -35,8 +35,7 @@ def create_excel_report(db: Session) -> Path:
             column
             for record in history
             for row in (record.get("rows") or [record.get("fields", {})])
-            for column in row.keys()
-            if column not in SUMMARY_COLUMNS
+            for column in {*row.keys(), *record.get("fields", {}).keys()}
         }
     )
     raw_sheet.append(["Upload ID", "Filename", "Detected Type", "Row No", *columns])
